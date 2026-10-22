@@ -71,41 +71,37 @@ MEDIKARA menggunakan pendekatan **Hybrid Resilient Storage** (Offline-First deng
    - Jika `DATABASE_URL` belum diisi atau koneksi PostgreSQL terputus, backend Express secara otomatis mengalihkan penyimpanan ke file JSON lokal agar sistem tetap beroperasi tanpa henti.
 3. **Browser LocalStorage (Offline-First Cache)**
    - Frontend menyimpan cache lokal di peramban untuk respon instan tanpa jeda loading.
-   - Dilengkapi pendeteksi status jaringan (`online/offline` event listener) dan auto-sync antrean perubahan (`__dirty_keys`).
-4. **Firebase**
-   - Digunakan untuk Firebase Authentication (manajemen login/otentikasi staf) dan pendukung cadangan real-time.
-
----
-
-## 🛠️ Teknologi
-
-### Frontend
-- **React 19** & **Vite 6** — Framework UI modern dan build tool kilat
-- **Recharts** — Grafik visualisasi tren stok dan surat
-- **jsPDF + AutoTable** & **html2canvas** — Generator berkas PDF dan cetak dokumen
-- **react-qr-code** — Pembuat kode QR unik untuk pelabelan aset
-- **Lucide React** — Set ikon antarmuka medis dan administrasi
-- **canvas-confetti** — Feedback animasi interaktif
-
-### Backend & Penyimpanan
-- **Express 5** — Backend API RESTful
-- **PostgreSQL (`pg`)** — Database relasional utama
-- **Firebase Auth & RTDB** — Otentikasi pengguna & sinkronisasi realtime
-- **Node.js Local File Storage** — Cadangan penyimpanan data JSON
-
-### Quality & Testing
-- **Vitest** — Unit & integration test
-- **@testing-library/react** — Pengujian komponen
-- **Oxlint** — Linter kode berkinerja tinggi
-
----
-
-## 📌 Persyaratan Sistem
-
-- **Node.js** versi 18 atau lebih baru
-- **npm** versi 9 atau lebih baru
-- Akun PostgreSQL (direkomendasikan layanan gratis seperti [Neon](https://neon.tech) atau [Supabase](https://supabase.com))
-- Akun Firebase (opsional jika menggunakan Firebase Authentication)
+74:    - Dilengkapi pendeteksi status jaringan (`online/offline` event listener) dan auto-sync antrean perubahan (`__dirty_keys`).
+75: 
+76: ---
+77: 
+78: ## 🛠️ Teknologi
+79: 
+80: ### Frontend
+81: - **React 19** & **Vite 6** — Framework UI modern dan build tool kilat
+82: - **Recharts** — Grafik visualisasi tren stok dan surat
+83: - **jsPDF + AutoTable** & **html2canvas** — Generator berkas PDF dan cetak dokumen
+84: - **react-qr-code** — Pembuat kode QR unik untuk pelabelan aset
+85: - **Lucide React** — Set ikon antarmuka medis dan administrasi
+86: - **canvas-confetti** — Feedback animasi interaktif
+87: 
+88: ### Backend & Penyimpanan
+89: - **Express 5** — Backend API RESTful
+90: - **PostgreSQL (`pg`)** — Database relasional utama
+91: - **Node.js Local File Storage** — Cadangan penyimpanan data JSON lokal
+92: 
+93: ### Quality & Testing
+94: - **Vitest** — Unit & integration test
+95: - **@testing-library/react** — Pengujian komponen
+96: - **Oxlint** — Linter kode berkinerja tinggi
+97: 
+98: ---
+99: 
+100: ## 📌 Persyaratan Sistem
+101: 
+102: - **Node.js** versi 18 atau lebih baru
+103: - **npm** versi 9 atau lebih baru
+104: - Akun **PostgreSQL** (opsional, disarankan [Neon](https://neon.tech) atau [Supabase](https://supabase.com) untuk cloud)
 
 ---
 
@@ -141,18 +137,9 @@ Buka file `.env` dan sesuaikan nilainya:
 ```env
 # Database PostgreSQL Utama (Neon / Supabase / Localhost)
 DATABASE_URL=postgresql://user:password@host:port/database_name?sslmode=require
-
-# Firebase Konfigurasi (Autentikasi & RTDB opsional)
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.asia-southeast1.firebasedatabase.app
 ```
 
-> 💡 **Tip:** Jika `DATABASE_URL` tidak diisi, backend otomatis menggunakan penyimpanan file JSON di folder `server/data/`.
+> 💡 **Tip:** Jika `DATABASE_URL` belum diisi, backend otomatis menggunakan penyimpanan file JSON di folder `server/data/` sehingga aplikasi langsung bisa dijalankan tanpa setup database eksternal.
 
 ### 4. Migrasi Data (Opsional)
 
