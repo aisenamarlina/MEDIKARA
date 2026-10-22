@@ -1,0 +1,38 @@
+[
+  {
+    "id": "BM-013/IX/2026",
+    "date": "2026-09-10",
+    "itemCode": "B-0302",
+    "itemName": "Map Plastik Document",
+    "qty": 20,
+    "unit": "Pcs",
+    "source": "",
+    "price": 0,
+    "officer": "Admin",
+    "notes": ""
+  },
+  {
+    "id": "BM-009/IX/2026",
+    "date": "2026-09-10",
+    "itemCode": "B-2984",
+    "itemName": "Pulpen Standard AE7",
+    "qty": 50,
+    "unit": "Pcs",
+    "source": "",
+    "price": 0,
+    "officer": "Admin",
+    "notes": ""
+  },
+  {
+    "id": "BM-007/VIII/2026",
+    "date": "2026-08-02",
+    "itemCode": "B-001",
+    "itemName": "Kertas A4 Sinar Dunia",
+    "qty": 15,
+    "unit": "Rim",
+    "source": "Toko Buku ATK Jaya",
+    "price": 55000,
+    "officer": "Admin",
+    "notes": "Restock bulanan"
+  }
+]

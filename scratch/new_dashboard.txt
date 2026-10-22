@@ -1,0 +1,244 @@
+﻿          {activeMenu === "dashboard" && (
+            <div className="animate-fade-in" style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>Halo, Administrator 👋</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Ringkasan data dan aktivitas klinik hari ini</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', padding: '0.6rem 1.2rem', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--primary-dark)', fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}>
+                  <Clock size={16} />
+                  <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+              </div>
+
+              {/* Stat Cards - 4 kolom */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+                {/* Surat Masuk */}
+                <div className="stat-card" style={{ background: 'linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%)', color: '#fff', padding: '1.5rem', border: 'none', boxShadow: '0 10px 25px -5px rgba(32, 163, 121, 0.4)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '0.75rem', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+                      <Mail size={22} color="#fff" />
+                    </div>
+                    <span style={{ fontSize: '1rem', fontWeight: 600 }}>Surat Masuk</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2.8rem', fontWeight: 800, lineHeight: 1 }}>{incomingLetters.length}</span>
+                    <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.6rem', borderRadius: '20px', marginBottom: '0.3rem', fontWeight: 600 }}>Total Data</span>
+                  </div>
+                </div>
+
+                {/* Surat Keluar */}
+                <div className="stat-card" style={{ padding: '1.5rem', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ backgroundColor: 'var(--primary-light)', padding: '0.75rem', borderRadius: '12px' }}>
+                      <FileText size={22} color="var(--primary)" />
+                    </div>
+                    <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>Surat Keluar</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{outgoingLetters.length}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--success)', backgroundColor: 'var(--primary-light)', padding: '0.25rem 0.6rem', borderRadius: '20px', marginBottom: '0.3rem', fontWeight: 600 }}>↗ Aktif</span>
+                  </div>
+                </div>
+
+                {/* Sertifikat */}
+                <div className="stat-card" style={{ padding: '1.5rem', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.75rem', borderRadius: '12px' }}>
+                      <Award size={22} color="#f59e0b" />
+                    </div>
+                    <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>Sertifikat</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{certificates.length}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.25rem 0.6rem', borderRadius: '20px', marginBottom: '0.3rem', fontWeight: 600 }}>★ Terbit</span>
+                  </div>
+                </div>
+
+                {/* Gudang */}
+                <div className="stat-card" style={{ padding: '1.5rem', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ backgroundColor: warehouseItems.some(i => i.currentStock <= i.minStock) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', padding: '0.75rem', borderRadius: '12px' }}>
+                      <Warehouse size={22} color={warehouseItems.some(i => i.currentStock <= i.minStock) ? 'var(--danger)' : 'var(--success)'} />
+                    </div>
+                    <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>Item Gudang</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{warehouseItems.length}</span>
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      color: warehouseItems.some(i => i.currentStock <= i.minStock) ? 'var(--danger)' : 'var(--success)', 
+                      backgroundColor: warehouseItems.some(i => i.currentStock <= i.minStock) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                      padding: '0.25rem 0.6rem', 
+                      borderRadius: '20px', 
+                      marginBottom: '0.3rem', 
+                      fontWeight: 600 
+                    }}>
+                      {warehouseItems.some(i => i.currentStock <= i.minStock) ? '⚠ Stok Tipis' : '✓ Aman'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Grafik + Stok Rendah */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+                {/* Grafik Persuratan */}
+                <div className="elegant-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>Statistik Persuratan</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Perbandingan tren surat masuk & keluar tahun {new Date().getFullYear()}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', fontWeight: 500, backgroundColor: 'var(--bg-main)', padding: '0.5rem 1rem', borderRadius: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-dark)', display: 'inline-block' }}></span>Masuk</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary)', display: 'inline-block' }}></span>Keluar</div>
+                    </div>
+                  </div>
+                  <div style={{ width: '100%', flex: 1, minHeight: '260px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={[
+                        { name: 'Jan', Masuk: 10, Keluar: 5 }, { name: 'Feb', Masuk: 15, Keluar: 12 }, { name: 'Mar', Masuk: 8, Keluar: 15 },
+                        { name: 'Apr', Masuk: 20, Keluar: 18 }, { name: 'Mei', Masuk: 18, Keluar: 25 }, { name: 'Jun', Masuk: 25, Keluar: 20 },
+                        { name: 'Jul', Masuk: 45, Keluar: Math.max(outgoingLetters.length, 30) }, { name: 'Agu', Masuk: incomingLetters.length, Keluar: outgoingLetters.length }
+                      ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-lg)', backgroundColor: '#fff', color: 'var(--text-dark)', fontWeight: 600, padding: '10px 15px' }} itemStyle={{ color: 'var(--primary-dark)' }} />
+                        <Area type="monotone" dataKey="Masuk" stroke="var(--primary-dark)" fill="url(#colorMasuk)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--primary-dark)' }} />
+                        <Area type="monotone" dataKey="Keluar" stroke="var(--primary)" fill="url(#colorKeluar)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--primary)' }} />
+                        <defs>
+                          <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--primary-dark)" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="var(--primary-dark)" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorKeluar" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Stok Rendah */}
+                <div className="elegant-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>Peringatan Stok</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Item di bawah batas aman</p>
+                    </div>
+                    <span style={{ backgroundColor: warehouseItems.filter(i => i.currentStock <= i.minStock).length > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', color: warehouseItems.filter(i => i.currentStock <= i.minStock).length > 0 ? 'var(--danger)' : 'var(--success)', fontSize: '0.8rem', fontWeight: 700, padding: '0.3rem 0.8rem', borderRadius: '20px' }}>
+                      {warehouseItems.filter(i => i.currentStock <= i.minStock).length} Perhatian
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+                    {warehouseItems.filter(i => i.currentStock <= i.minStock).length === 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                        <div style={{ backgroundColor: 'rgba(16,185,129,0.1)', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+                          <CheckCircle2 size={36} color="var(--success)" />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>Stok Aman</p>
+                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>Tidak ada barang kritis</p>
+                      </div>
+                    ) : (
+                      warehouseItems.filter(i => i.currentStock <= i.minStock).slice(0, 5).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.2)', borderLeft: '4px solid var(--danger)', boxShadow: 'var(--shadow-sm)' }}>
+                          <div>
+                            <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{item.name}</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.location}</p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ display: 'block', fontSize: '1rem', fontWeight: 800, color: 'var(--danger)' }}>{item.currentStock}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Min: {item.minStock}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', textAlign: 'center', fontSize: '0.85rem' }}>
+                    <div>
+                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Barang Masuk</span>
+                      <strong style={{ color: 'var(--text-dark)', fontSize: '1.1rem' }}>{stockInList.length}</strong>
+                    </div>
+                    <div style={{ borderLeft: '1px solid var(--border-light)', borderRight: '1px solid var(--border-light)' }}>
+                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Barang Keluar</span>
+                      <strong style={{ color: 'var(--text-dark)', fontSize: '1.1rem' }}>{stockOutList.length}</strong>
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Dipinjam</span>
+                      <strong style={{ color: 'var(--text-dark)', fontSize: '1.1rem' }}>{borrowings.filter(b => b.status === 'Dipinjam').length}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Surat Terbaru + Aktivitas */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                {/* Surat Masuk Terbaru */}
+                <div className="elegant-card" style={{ padding: '1.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>Surat Masuk Terbaru</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Update dokumen hari ini</p>
+                    </div>
+                    <button onClick={() => setActiveMenu('incoming')} style={{ fontSize: '0.85rem', color: 'var(--primary)', background: 'var(--primary-light)', padding: '0.4rem 1rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(32, 163, 121, 0.2)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--primary-light)'}>Lihat Semua</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {incomingLetters.slice(0, 4).map((letter, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.85rem', borderRadius: '12px', transition: 'background-color 0.2s', cursor: 'pointer' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-main)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <div style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '0.6rem', borderRadius: '10px', flexShrink: 0 }}>
+                          <Mail size={18} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{letter.subject}</p>
+                          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dari: <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{letter.sender}</span></p>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.6rem', borderRadius: '20px', marginBottom: '0.25rem', backgroundColor: letter.status === 'Baru' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)', color: letter.status === 'Baru' ? '#3b82f6' : 'var(--success)', display: 'inline-block' }}>{letter.status}</span>
+                          <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-light)' }}>{letter.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {incomingLetters.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem' }}>Belum ada surat masuk</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Aktivitas Terkini */}
+                <div className="elegant-card" style={{ padding: '1.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>Aktivitas Terkini</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Log sistem dan pengguna</p>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)', padding: '0.3rem 0.8rem', borderRadius: '20px', fontWeight: 600, border: '1px solid var(--border)' }}>{activityLogs.length} Entri Log</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {activityLogs.slice(0, 4).map((log, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center', padding: '0.85rem', borderRadius: '12px', transition: 'background-color 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-main)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <div style={{ backgroundColor: '#fff', border: '1px solid var(--border)', padding: '0.5rem', borderRadius: '10px', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
+                          <Clock size={16} color="var(--primary)" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{log.activity}</p>
+                          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.notes}</p>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', flexShrink: 0, backgroundColor: 'var(--bg-main)', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>{new Date(log.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    ))}
+                    {activityLogs.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem' }}>Belum ada aktivitas tercatat</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}

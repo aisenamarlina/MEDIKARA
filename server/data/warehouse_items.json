@@ -1,0 +1,68 @@
+[
+  {
+    "code": "B-8853",
+    "name": "TV Monitor 32 Inch",
+    "category": "Elektronik",
+    "unit": "Unit",
+    "minStock": 2,
+    "currentStock": 1,
+    "location": "Gudang Utama",
+    "condition": "Baik",
+    "notes": "Display antrian"
+  },
+  {
+    "code": "B-7712",
+    "name": "Sapu & Alat Pel Lantai",
+    "category": "Kebersihan",
+    "unit": "Set",
+    "minStock": 5,
+    "currentStock": 4,
+    "location": "Gudang Utama",
+    "condition": "Baik",
+    "notes": "Alat sanitasi"
+  },
+  {
+    "code": "B-2035",
+    "name": "Printer Thermal Kasir",
+    "category": "Elektronik",
+    "unit": "Unit",
+    "minStock": 2,
+    "currentStock": 2,
+    "location": "Gudang Utama",
+    "condition": "Baik",
+    "notes": "Printer struk resepsionis"
+  },
+  {
+    "code": "B-9184",
+    "name": "Ballpoint Standard Hitam",
+    "category": "ATK",
+    "unit": "Pcs",
+    "minStock": 10,
+    "currentStock": 17,
+    "location": "Gudang Utama",
+    "condition": "Baik",
+    "notes": "ATK operasional"
+  },
+  {
+    "code": "B-001",
+    "name": "Kertas A4 Sinar Dunia 75gr",
+    "category": "ATK",
+    "unit": "Rim",
+    "minStock": 10,
+    "currentStock": 5,
+    "location": "Rak ATK A1",
+    "condition": "Baik",
+    "notes": "Kertas printer"
+  },
+  {
+    "code": "B-002",
+    "name": "Cairan Disinfektan Medis 5L",
+    "category": "Kebersihan",
+    "unit": "Galon",
+    "minStock": 3,
+    "currentStock": 6,
+    "location": "Rak Kimia B2",
+    "condition": "Baik",
+    "notes": "Sanitasi ruangan"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "AST-001",
+    "name": "Tensimeter Digital",
+    "kategori": "Medis"
+  },
+  {
+    "id": "AST-002",
+    "name": "Kursi Roda",
+    "kategori": "Non-Medis"
+  }
+]

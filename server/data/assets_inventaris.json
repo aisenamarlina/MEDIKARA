@@ -1,0 +1,23 @@
+[
+  {
+    "id": "3-3-16-106-2",
+    "category": "Barang/Benda",
+    "jenisAset": "Peralatan Kantor",
+    "namaAset": "Jam dinding + Kaligrafi",
+    "satuan": "Pcs",
+    "tanggalPerolehan": "2023-12-31",
+    "portability": [
+      "Mudah dibawa"
+    ],
+    "kondisi": "Baik",
+    "hargaPerUnit": 150000,
+    "lokasi": "RUANG ASMAN ADUM DAN KERUMAH TANGGA",
+    "pemegang": "NANANG ALAMSYAH, ST",
+    "keterangan": "Inventaris",
+    "biayaRincian": [],
+    "umurEkonomis": 5,
+    "satuanUmurEkonomis": "Tahun",
+    "nilaiResidu": 0,
+    "fotoAset": null
+  }
+]

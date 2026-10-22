@@ -1,0 +1,38 @@
+[
+  {
+    "id": "BK-012/VIII/2026",
+    "date": "2026-08-26",
+    "itemCode": "B-7712",
+    "itemName": "Sapu",
+    "qty": 1,
+    "unit": "Pcs",
+    "destination": "-",
+    "officer": "Admin",
+    "notes": "",
+    "status": "Disetujui"
+  },
+  {
+    "id": "BK-011/VIII/2026",
+    "date": "2026-08-25",
+    "itemCode": "B-002",
+    "itemName": "Cairan Disinfektan 5L",
+    "qty": 1,
+    "unit": "Galon",
+    "destination": "-",
+    "officer": "Admin",
+    "notes": "",
+    "status": "Disetujui"
+  },
+  {
+    "id": "BK-008/VIII/2026",
+    "date": "2026-08-25",
+    "itemCode": "B-9184",
+    "itemName": "Balpoint",
+    "qty": 2,
+    "unit": "Pcs",
+    "destination": "-",
+    "officer": "Admin",
+    "notes": "-",
+    "status": "Ditolak"
+  }
+]

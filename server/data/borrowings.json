@@ -1,0 +1,34 @@
+[
+  {
+    "id": "PMJ-007/VIII/2026",
+    "date": "2026-08-26",
+    "borrower": "Hari",
+    "unit": "CS",
+    "itemCode": "-",
+    "itemName": "Bor",
+    "qty": 1,
+    "conditionOut": "Baik",
+    "dueDate": "2026-08-30",
+    "purpose": "-",
+    "returnDate": "",
+    "conditionIn": "",
+    "status": "Dipinjam",
+    "notes": ""
+  },
+  {
+    "id": "PMJ-006/VIII/2026",
+    "date": "2026-08-25",
+    "borrower": "Dini",
+    "unit": "Poli Anak",
+    "itemCode": "-",
+    "itemName": "Tabung Oksigen",
+    "qty": 1,
+    "conditionOut": "Baik",
+    "dueDate": "2026-08-26",
+    "purpose": "-",
+    "returnDate": "",
+    "conditionIn": "",
+    "status": "Selesai",
+    "notes": ""
+  }
+]

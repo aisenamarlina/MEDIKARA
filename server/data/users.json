@@ -1,0 +1,12 @@
+[
+  {
+    "id": "usr-001",
+    "username": "admin",
+    "password": "admin",
+    "name": "Admin",
+    "role": "Administrator",
+    "department": "Unit IT",
+    "email": "kbaiturrahmangarut@gmail.com",
+    "avatarColor": "#0d9488"
+  }
+]

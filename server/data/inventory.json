@@ -1,0 +1,28 @@
+[
+  {
+    "code": "INV-KBR-001",
+    "name": "AC Split Daikin 1.5 PK",
+    "category": "Elektronik",
+    "brand": "Daikin",
+    "serialNo": "DK9827361",
+    "buyYear": "2023",
+    "price": 5500000,
+    "location": "Poli Umum",
+    "officer": "Andi",
+    "condition": "Baik",
+    "status": "Baik"
+  },
+  {
+    "code": "INV-KBR-002",
+    "name": "Meja Kantor Kayu Jati",
+    "category": "Peralatan kantor",
+    "brand": "Custom",
+    "serialNo": "MJKJ-01",
+    "buyYear": "2022",
+    "price": 2500000,
+    "location": "Ruang Direktur",
+    "officer": "Andi",
+    "condition": "Baik",
+    "status": "Baik"
+  }
+]
