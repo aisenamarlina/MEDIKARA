@@ -5,24 +5,25 @@
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
   <img src="https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
   <img src="https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white" />
-  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
   <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
 </p>
 
 ---
 
-**MEDIKARA** adalah aplikasi informasi berbasis web yang dirancang untuk membantu pengelolaan administrasi, persediaan, dan aset klinik secara terpadu. Aplikasi ini menyediakan dashboard interaktif dan fitur pencatatan yang terintegrasi dalam satu antarmuka yang mudah digunakan.
+**MEDIKARA** adalah aplikasi sistem informasi terpadu berbasis web yang dirancang khusus untuk mempermudah tata kelola administrasi surat-menyurat, inventaris gudang, serta siklus hidup aset dan sarana prasarana klinik.
 
 ---
 
 ## 📋 Daftar Isi
 
 - [Fitur Utama](#-fitur-utama)
+- [Arsitektur & Database](#-arsitektur--database)
 - [Teknologi](#-teknologi)
-- [Persyaratan](#-persyaratan)
+- [Persyaratan Sistem](#-persyaratan-sistem)
 - [Instalasi & Menjalankan Lokal](#-instalasi--menjalankan-lokal)
+- [Konfigurasi Environment](#-konfigurasi-environment)
 - [Perintah yang Tersedia](#-perintah-yang-tersedia)
-- [Konfigurasi](#-konfigurasi)
 - [Struktur Proyek](#-struktur-proyek)
 
 ---
@@ -31,51 +32,81 @@
 
 | Modul | Deskripsi |
 |---|---|
-| 📊 **Dashboard** | Ringkasan data, statistik, dan pencarian informasi secara cepat |
-| 📬 **Surat Masuk & Keluar** | Pengelolaan dan pencatatan surat secara digital |
-| 📜 **Sertifikat & Arsip** | Manajemen sertifikat dan arsip dokumen digital |
-| 📦 **Inventaris Gudang** | Pencatatan barang masuk dan barang keluar gudang |
-| 🏷️ **Data Aset & Inventaris** | Pengelolaan aset lengkap beserta detail dan riwayatnya |
-| 🔄 **Relokasi Aset** | Pencatatan perpindahan atau relokasi aset antar ruangan/unit |
-| 📋 **Laporan Aset** | Laporan aset lengkap yang dapat dicetak dan diekspor |
-| 🛒 **Permintaan Barang** | Pengajuan permintaan barang keluar dan peminjaman inventaris |
-| 📈 **Laporan Bulanan** | Rekap laporan bulanan operasional klinik |
-| ⚙️ **Pengaturan Sistem** | Konfigurasi dan pengaturan aplikasi |
-| 🖨️ **Ekspor & Cetak** | Ekspor laporan ke PDF dan pencetakan langsung |
+| 📊 **Dashboard** | Statistik analitik, ringkasan operasional klinik, dan pencarian cepat |
+| 📬 **Surat Masuk & Keluar** | Pengarsipan nomor surat otomatis, disposisi, dan surat dinas klinik |
+| 📜 **Sertifikat & Arsip Digital** | Pembuatan nomor sertifikat medis dan manajemen berkas arsip terpusat |
+| 📦 **Inventaris Gudang** | Kontrol stok obat/alkes, pencatatan Barang Masuk (BM) & Barang Keluar (BK) |
+| 🏷️ **Data Aset & Inventaris** | Pelacakan aset fisik klinik, kondisi barang, nilai, dan QR Code aset |
+| 🔄 **Relokasi Aset** | Mutasi atau perpindahan inventaris antar ruangan / unit kerja |
+| 🛒 **Peminjaman & Permintaan** | Alur peminjaman alat serta permintaan barang pakai habis |
+| 📋 **Laporan & Rekapitulasi** | Ekspor laporan berkala, cetak label, dan konversi ke PDF siap cetak |
+| ⚙️ **Pengaturan Sistem** | Konfigurasi kop surat, format penomoran dokumen, dan manajemen akun staf |
+
+---
+
+## 🗄️ Arsitektur & Database
+
+MEDIKARA menggunakan pendekatan **Hybrid Resilient Storage** (Offline-First dengan sinkronisasi Cloud):
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   Aplikasi Frontend                    │
+│            (React 19 + LocalStorage Cache)             │
+└───────────────────────────┬────────────────────────────┘
+                            │
+               Sinkronisasi REST API (Express)
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+┌─────────────────────────┐     ┌─────────────────────────┐
+│  🐘 PostgreSQL (Utama)  │     │ 📁 Local JSON (Fallback)│
+│  (Neon DB / Supabase)   │     │      server/data/       │
+│  Koneksi via pg pool    │     │  Aktif saat DB offline  │
+└─────────────────────────┘     └─────────────────────────┘
+```
+
+1. **PostgreSQL (Database Utama)**
+   - Menggunakan library `pg` (node-postgres) yang terhubung ke server PostgreSQL (didukung oleh **Neon Database**, **Supabase**, atau instance lokal).
+   - Seluruh data transaksi, aset, dan surat disimpan dalam tabel persisten di cloud.
+2. **Local JSON Fallback (`server/data/`)**
+   - Jika `DATABASE_URL` belum diisi atau koneksi PostgreSQL terputus, backend Express secara otomatis mengalihkan penyimpanan ke file JSON lokal agar sistem tetap beroperasi tanpa henti.
+3. **Browser LocalStorage (Offline-First Cache)**
+   - Frontend menyimpan cache lokal di peramban untuk respon instan tanpa jeda loading.
+   - Dilengkapi pendeteksi status jaringan (`online/offline` event listener) dan auto-sync antrean perubahan (`__dirty_keys`).
+4. **Firebase**
+   - Digunakan untuk Firebase Authentication (manajemen login/otentikasi staf) dan pendukung cadangan real-time.
 
 ---
 
 ## 🛠️ Teknologi
 
 ### Frontend
-- **React 19** — Library UI modern berbasis komponen
-- **Vite 6** — Build tool cepat untuk pengembangan web
-- **Recharts** — Visualisasi grafik dan chart interaktif
-- **jsPDF + AutoTable** — Ekspor laporan ke format PDF
-- **html2canvas** — Konversi konten HTML ke gambar
-- **react-qr-code** — Generasi QR Code untuk aset
-- **Lucide React** — Ikon modern dan konsisten
-- **canvas-confetti** — Animasi konfeti interaktif
+- **React 19** & **Vite 6** — Framework UI modern dan build tool kilat
+- **Recharts** — Grafik visualisasi tren stok dan surat
+- **jsPDF + AutoTable** & **html2canvas** — Generator berkas PDF dan cetak dokumen
+- **react-qr-code** — Pembuat kode QR unik untuk pelabelan aset
+- **Lucide React** — Set ikon antarmuka medis dan administrasi
+- **canvas-confetti** — Feedback animasi interaktif
 
-### Backend
-- **Express 5** — Framework server Node.js
-- **Firebase Realtime Database** — Penyimpanan data real-time berbasis cloud
-- **Firebase Authentication** — Autentikasi pengguna
-- **PostgreSQL** *(opsional)* — Database relasional untuk penyimpanan lokal
+### Backend & Penyimpanan
+- **Express 5** — Backend API RESTful
+- **PostgreSQL (`pg`)** — Database relasional utama
+- **Firebase Auth & RTDB** — Otentikasi pengguna & sinkronisasi realtime
+- **Node.js Local File Storage** — Cadangan penyimpanan data JSON
 
-### Testing & Tooling
-- **Vitest** — Framework pengujian unit
-- **@testing-library/react** — Pengujian komponen React
-- **Oxlint** — Linter JavaScript/TypeScript yang cepat
+### Quality & Testing
+- **Vitest** — Unit & integration test
+- **@testing-library/react** — Pengujian komponen
+- **Oxlint** — Linter kode berkinerja tinggi
 
 ---
 
-## 📌 Persyaratan
+## 📌 Persyaratan Sistem
 
-- **Node.js** versi 18 ke atas
-- **npm** versi 9 ke atas
-- **PostgreSQL** *(opsional, hanya jika ingin menggunakan database relasional)*
-- Akun **Firebase** untuk penyimpanan cloud dan autentikasi
+- **Node.js** versi 18 atau lebih baru
+- **npm** versi 9 atau lebih baru
+- Akun PostgreSQL (direkomendasikan layanan gratis seperti [Neon](https://neon.tech) atau [Supabase](https://supabase.com))
+- Akun Firebase (opsional jika menggunakan Firebase Authentication)
 
 ---
 
@@ -94,9 +125,9 @@ cd MEDIKARA
 npm install
 ```
 
-### 3. Buat File `.env`
+### 3. Buat File Konfigurasi `.env`
 
-Salin file contoh konfigurasi:
+Salin template konfigurasi:
 
 ```bash
 # Windows PowerShell
@@ -106,32 +137,40 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Kemudian edit file `.env` dan isi variabel yang diperlukan:
+Buka file `.env` dan sesuaikan nilainya:
 
 ```env
-# PostgreSQL (opsional — kosongkan jika tidak digunakan)
+# Database PostgreSQL Utama (Neon / Supabase / Localhost)
 DATABASE_URL=postgresql://user:password@host:port/database_name?sslmode=require
 
-# Firebase
+# Firebase Konfigurasi (Autentikasi & RTDB opsional)
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
 VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.firebaseio.com
+VITE_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.asia-southeast1.firebasedatabase.app
 ```
 
-> **Catatan:** Tanpa `DATABASE_URL`, server akan menggunakan penyimpanan lokal berbasis file JSON di folder `server/data`.
+> 💡 **Tip:** Jika `DATABASE_URL` tidak diisi, backend otomatis menggunakan penyimpanan file JSON di folder `server/data/`.
 
-### 4. Jalankan Aplikasi
+### 4. Migrasi Data (Opsional)
+
+Jika ingin memindahkan data awal ke PostgreSQL:
+
+```bash
+npm run migrate:pg
+```
+
+### 5. Jalankan Aplikasi
 
 ```bash
 npm run dev
 ```
 
-Perintah ini menjalankan server API Express dan Vite secara bersamaan.
-Buka browser dan akses: **`http://localhost:5173`**
+Perintah di atas akan menjalankan **backend Express (port 3001)** dan **frontend Vite (port 5173)** secara bersamaan.
+Buka peramban di: **`http://localhost:5173`**
 
 ---
 
@@ -139,44 +178,16 @@ Buka browser dan akses: **`http://localhost:5173`**
 
 | Perintah | Keterangan |
 |---|---|
-| `npm run dev` | Menjalankan server API + aplikasi web (mode pengembangan) |
-| `npm run server` | Menjalankan server API Express saja |
-| `npm run client` | Menjalankan aplikasi web Vite saja |
-| `npm run build` | Membuat build produksi di folder `dist` |
-| `npm run preview` | Meninjau hasil build produksi secara lokal |
-| `npm run lint` | Menjalankan Oxlint untuk memeriksa kualitas kode |
-| `npm test` | Menjalankan seluruh unit test sekali |
-| `npm run test:watch` | Menjalankan test dalam mode watch (auto re-run) |
-| `npm run migrate` | Menjalankan skrip migrasi data JSON |
-| `npm run migrate:pg` | Menjalankan skrip migrasi ke PostgreSQL |
-| `npm run deploy` | Build produksi dan deploy ke Vercel |
-
----
-
-## ⚙️ Konfigurasi
-
-### Database
-
-Server membaca variabel `DATABASE_URL` atau `POSTGRES_URL` dari file `.env`.
-
-- **Dengan PostgreSQL:** Isi `DATABASE_URL` dengan URL koneksi yang valid.
-- **Tanpa PostgreSQL:** Server otomatis menggunakan file JSON di `server/data/` sebagai penyimpanan lokal.
-
-### Firebase
-
-Variabel lingkungan Firebase harus diawali dengan `VITE_` agar dapat diakses oleh Vite di sisi frontend:
-
-| Variabel | Keterangan |
-|---|---|
-| `VITE_FIREBASE_API_KEY` | API Key aplikasi Firebase |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Domain autentikasi Firebase |
-| `VITE_FIREBASE_PROJECT_ID` | ID proyek Firebase |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Bucket Firebase Storage |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Sender ID Firebase Cloud Messaging |
-| `VITE_FIREBASE_APP_ID` | App ID Firebase |
-| `VITE_FIREBASE_DATABASE_URL` | URL Realtime Database Firebase |
-
-> ⚠️ **Jangan pernah** menyertakan file `.env` atau kredensial pribadi ke dalam repositori.
+| `npm run dev` | Menjalankan backend server dan frontend Vite bersamaan |
+| `npm run server` | Menjalankan backend API Express saja |
+| `npm run client` | Menjalankan frontend Vite saja |
+| `npm run build` | Membuat paket produksi di direktori `dist/` |
+| `npm run preview` | Menjalankan pratinjau hasil build produksi secara lokal |
+| `npm run lint` | Menjalankan pengecekan kode dengan Oxlint |
+| `npm test` | Menjalankan seluruh pengujian (test suite) dengan Vitest |
+| `npm run test:watch` | Menjalankan test dalam mode pantau aktif (watch mode) |
+| `npm run migrate:pg` | Migrasi schema dan seed data awal ke PostgreSQL |
+| `npm run deploy` | Melakukan build dan deploy ke Vercel |
 
 ---
 
@@ -184,47 +195,39 @@ Variabel lingkungan Firebase harus diawali dengan `VITE_` agar dapat diakses ole
 
 ```
 MEDIKARA/
-├── api/                  # Konfigurasi API (Vercel serverless)
-├── public/               # Aset statis publik
-├── scripts/              # Skrip migrasi data
-│   ├── migrate.js
-│   └── migrate-postgres.js
+├── api/                  # Konfigurasi handler API serverless (Vercel)
+├── public/               # File statis publik (logo, favicon)
+├── scripts/              # Utilitas & skrip migrasi data
+│   ├── auto-push.ps1     # Skrip sinkronisasi otomatis ke GitHub
+│   ├── migrate.js        # Utilitas migrasi data lokal
+│   └── migrate-postgres.js # Skrip inisialisasi tabel PostgreSQL
 ├── server/               # Backend Express
-│   ├── index.js          # Entry point server
-│   └── data/             # Penyimpanan data lokal (JSON)
-├── src/                  # Kode sumber frontend
-│   ├── assets/           # Gambar dan aset lokal
-│   ├── pages/            # Halaman aplikasi
-│   │   ├── DataAsetInventaris.jsx
-│   │   ├── InventarisGudang.jsx
-│   │   ├── LaporanAset.jsx
-│   │   ├── MasterAset.jsx
-│   │   ├── PengaturanSistem.jsx
-│   │   ├── RelokasiAset.jsx
-│   │   └── SuratKeluar.jsx
-│   ├── utils/            # Fungsi utilitas
-│   ├── App.jsx           # Komponen utama aplikasi
-│   ├── db.js             # Konfigurasi dan query database
-│   ├── firebase.js       # Konfigurasi Firebase
-│   ├── defaultData.js    # Data default aplikasi
-│   └── main.jsx          # Entry point React
-├── .env.example          # Contoh konfigurasi environment
-├── .gitignore
-├── index.html
+│   ├── data/             # Direktori penyimpanan JSON (fallback offline)
+│   ├── index.js          # Router Express & endpoint API
+│   └── postgres.js       # Pengelola koneksi pool & kueri PostgreSQL
+├── src/                  # Kode sumber aplikasi React
+│   ├── assets/           # Berkas gambar dan ikon lokal
+│   ├── pages/            # Komponen halaman aplikasi
+│   ├── db.js             # Data Access Object (DAO) & sinkronisasi multi-storage
+│   ├── firebase.js       # Inisialisasi Firebase Auth & RTDB
+│   ├── defaultData.js    # Data default sistem klinik
+│   ├── App.jsx           # Komponen root navigasi dan layout
+│   └── main.jsx          # Entry point React Vite
+├── .env.example          # Templat variabel lingkungan
 ├── package.json
-├── vercel.json           # Konfigurasi deployment Vercel
-└── vite.config.js        # Konfigurasi Vite
+├── vercel.json           # Konfigurasi deployment hosting Vercel
+└── vite.config.js        # Konfigurasi bundling Vite
 ```
 
 ---
 
 ## 🎓 Informasi Proyek
 
-Proyek ini dikembangkan sebagai bagian dari **Proyek Kerja Praktik**.
+Proyek ini dikembangkan sebagai bagian dari **Proyek Kerja Praktik** pada Klinik Baiturrahman.
 
 ---
 
 <p align="center">
-  Dibuat oleh Ai Sena dan Allisa
+  Dibuat dengan ❤️ oleh <b>Ai Sena</b> dan <b>Allisa</b>
 </p>
 
