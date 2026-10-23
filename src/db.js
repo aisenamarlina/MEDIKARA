@@ -6,6 +6,8 @@
 
 import {
   defaultSettings,
+  defaultDirectorSignature,
+  defaultClinicStamp,
   defaultSequences,
   defaultOutgoingLetters,
   defaultCertificates,
@@ -357,11 +359,14 @@ export const initDB = async () => {
             const localSettings = lsGet('settings', defaultSettings);
             const isLocalCustomSig = localSettings.signature && localSettings.signature !== defaultDirectorSignature;
             const isServerCustomSig = v.signature && v.signature !== defaultDirectorSignature;
-            const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : (v.signature || defaultDirectorSignature));
+            // Server custom signature takes priority (it was uploaded by another device)
+            // If server has no custom, use local custom, otherwise use default
+            const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : defaultDirectorSignature);
 
             const isLocalCustomStamp = localSettings.stamp && localSettings.stamp !== defaultClinicStamp;
             const isServerCustomStamp = v.stamp && v.stamp !== defaultClinicStamp;
-            const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : (v.stamp || defaultClinicStamp));
+            // Same priority: server > local > default
+            const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : defaultClinicStamp);
 
             const isLocalCustomLogo = localSettings.logo && localSettings.logo !== defaultSettings.logo && localSettings.logo !== '/logo.png';
             const isServerCustomLogo = v.logo && v.logo !== defaultSettings.logo && v.logo !== '/logo.png';
@@ -369,15 +374,16 @@ export const initDB = async () => {
 
             const mergedSettings = {
               ...defaultSettings,
-              ...localSettings,
-              ...v,
+              ...v,           // server settings first (has latest saved data)
+              ...localSettings, // then local (may have unsent changes)
               signature: finalSignature,
               stamp: finalStamp,
               logo: finalLogo
             };
             lsSet('settings', mergedSettings, true);
-            // Jika lokal memiliki TTD/Cap kustom yang belum ada di server, dorong ke server
-            if (isLocalCustomSig || isLocalCustomStamp || isLocalCustomLogo) {
+            // Jika lokal memiliki TTD/Cap kustom yang belum tersimpan di server, push ke server
+            if ((isLocalCustomSig && !isServerCustomSig) || (isLocalCustomStamp && !isServerCustomStamp) || (isLocalCustomLogo && !isServerCustomLogo)) {
+              console.log('[MEDIKARA] Menyinkronkan TTD/Cap kustom lokal ke server...');
               pushToServer('settings', mergedSettings);
             }
           } else if (ARRAY_COLLECTIONS.has(k)) {
