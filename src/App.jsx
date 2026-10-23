@@ -357,15 +357,17 @@ export default function App() {
       }
 
       if ((parsed && parsed.username === "admin") || savedUsername === "admin") {
+        const users = db.get("users") || defaultUsers;
+        const savedAdmin = users.find(u => u.username && u.username.toLowerCase() === "admin");
         const adminUser = {
           id: "usr-001",
           username: "admin",
-          password: parsed?.password || "admin",
-          name: "Admin",
-          role: "Administrator",
-          department: "Unit IT",
-          email: "kbaiturrahmangarut@gmail.com",
-          avatarColor: "#0d9488"
+          password: parsed?.password || savedAdmin?.password || "admin",
+          name: parsed?.name || savedAdmin?.name || "Admin",
+          role: parsed?.role || savedAdmin?.role || "Administrator",
+          department: parsed?.department || savedAdmin?.department || "Unit IT",
+          email: parsed?.email || savedAdmin?.email || "kbaiturrahmangarut@gmail.com",
+          avatarColor: parsed?.avatarColor || savedAdmin?.avatarColor || "#0d9488"
         };
         localStorage.setItem("kbr_session_user", "admin");
         localStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
@@ -560,19 +562,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Only initialize defaults if no clinicName exists yet (first load)
-    if (!settings || !settings.clinicName) {
-      const newSettings = {
-        ...settings,
-        clinicName: "KLINIK BAITURRAHMAN GARUT",
-        address: "Jl. Merdeka No. 217 Tarogong Kidul - Garut",
-        phone: "Telp. 0262-234754, HP. 0813-2124-3303",
-        email: "klinikbaiturrahman@rocketmail.com",
-        city: "Garut",
-        nib: settings?.nib || "91203004416170002"
+    // Pastikan seluruh properti default (terutama signature dan stamp) lengkap
+    if (!settings || !settings.clinicName || !settings.signature || !settings.stamp) {
+      const fullSettings = {
+        ...defaultSettings,
+        ...(settings || {}),
+        signature: settings?.signature || defaultDirectorSignature,
+        stamp: settings?.stamp || defaultClinicStamp,
+        logo: settings?.logo || defaultSettings.logo || "/logo.png"
       };
-      setSettings(newSettings);
-      db.set("settings", newSettings);
+      setSettings(fullSettings);
+      db.set("settings", fullSettings);
     }
   }, [settings]);
 
@@ -624,7 +624,11 @@ export default function App() {
     }
 
     // Hapus field password agar tidak ikut masuk ke tabel pengaturan
-    const finalSettings = { ...newSettings };
+    const finalSettings = {
+      ...defaultSettings,
+      ...settings,
+      ...newSettings
+    };
     delete finalSettings.oldPassword;
     delete finalSettings.newPassword;
     delete finalSettings.confirmPassword;
@@ -940,21 +944,46 @@ export default function App() {
     aset: true
   });
 
-  // Pengaturan Tanda Tangan Laporan Bulanan (Dapat diedit instan)
-  const [reportSigneeCount, setReportSigneeCount] = useState(3); // 1, 2, or 3
-  const [reportDate, setReportDate] = useState("Garut, 1 September 2026");
-  const [reportSigneeLeftTitle, setReportSigneeLeftTitle] = useState("Kepala Klinik");
-  const [reportSigneeLeftName, setReportSigneeLeftName] = useState("dr. H. Asep Maryaman");
-  const [reportSigneeLeftNik, setReportSigneeLeftNik] = useState("1.21.1");
+  // Pengaturan Tanda Tangan Laporan Bulanan (Dapat diedit instan dan tersimpan permanen)
+  const savedReportConfig = db.get("report_signature_config") || {};
+  const [reportSigneeCount, setReportSigneeCount] = useState(() => savedReportConfig.count ?? 3);
+  const [reportDate, setReportDate] = useState(() => savedReportConfig.date || `Garut, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+  const [reportSigneeLeftTitle, setReportSigneeLeftTitle] = useState(() => savedReportConfig.leftTitle || "Kepala Klinik");
+  const [reportSigneeLeftName, setReportSigneeLeftName] = useState(() => savedReportConfig.leftName || "dr. H. Asep Maryaman");
+  const [reportSigneeLeftNik, setReportSigneeLeftNik] = useState(() => savedReportConfig.leftNik || "1.21.1");
 
-  const [reportSigneeMiddleTitle, setReportSigneeMiddleTitle] = useState("KASUBID Umum");
-  const [reportSigneeMiddleName, setReportSigneeMiddleName] = useState("NANANG ALAMSYAH, ST");
-  const [reportSigneeMiddleNik, setReportSigneeMiddleNik] = useState("23.10.1");
+  const [reportSigneeMiddleTitle, setReportSigneeMiddleTitle] = useState(() => savedReportConfig.middleTitle || "KASUBID Umum");
+  const [reportSigneeMiddleName, setReportSigneeMiddleName] = useState(() => savedReportConfig.middleName || "NANANG ALAMSYAH, ST");
+  const [reportSigneeMiddleNik, setReportSigneeMiddleNik] = useState(() => savedReportConfig.middleNik || "23.10.1");
 
-  const [reportSigneeRightTitle, setReportSigneeRightTitle] = useState("Penanggung Jawab");
-  const [reportSigneeRightName, setReportSigneeRightName] = useState("Andriana");
-  const [reportSigneeRightNik, setReportSigneeRightNik] = useState("");
-  const [showReportTTD, setShowReportTTD] = useState(false);
+  const [reportSigneeRightTitle, setReportSigneeRightTitle] = useState(() => savedReportConfig.rightTitle || "Penanggung Jawab");
+  const [reportSigneeRightName, setReportSigneeRightName] = useState(() => savedReportConfig.rightName || "Andriana");
+  const [reportSigneeRightNik, setReportSigneeRightNik] = useState(() => savedReportConfig.rightNik || "");
+  const [showReportTTD, setShowReportTTD] = useState(() => Boolean(savedReportConfig.showTTD));
+
+  // Sync perubahan tanda tangan laporan otomatis ke storage
+  useEffect(() => {
+    db.set("report_signature_config", {
+      count: reportSigneeCount,
+      date: reportDate,
+      leftTitle: reportSigneeLeftTitle,
+      leftName: reportSigneeLeftName,
+      leftNik: reportSigneeLeftNik,
+      middleTitle: reportSigneeMiddleTitle,
+      middleName: reportSigneeMiddleName,
+      middleNik: reportSigneeMiddleNik,
+      rightTitle: reportSigneeRightTitle,
+      rightName: reportSigneeRightName,
+      rightNik: reportSigneeRightNik,
+      showTTD: showReportTTD
+    });
+  }, [
+    reportSigneeCount, reportDate,
+    reportSigneeLeftTitle, reportSigneeLeftName, reportSigneeLeftNik,
+    reportSigneeMiddleTitle, reportSigneeMiddleName, reportSigneeMiddleNik,
+    reportSigneeRightTitle, reportSigneeRightName, reportSigneeRightNik,
+    showReportTTD
+  ]);
 
   
   const buildLetterReportDoc = (month, year, type) => {
@@ -1221,11 +1250,11 @@ export default function App() {
           ...loggedUser,
           id: "usr-001",
           username: "admin",
-          name: "Admin",
-          role: "Administrator",
-          department: "Unit IT",
-          email: "kbaiturrahmangarut@gmail.com",
-          avatarColor: "#0d9488"
+          name: loggedUser.name || "Admin",
+          role: loggedUser.role || "Administrator",
+          department: loggedUser.department || "Unit IT",
+          email: loggedUser.email || "kbaiturrahmangarut@gmail.com",
+          avatarColor: loggedUser.avatarColor || "#0d9488"
         };
       }
       setIsLoggedIn(true);
@@ -1235,6 +1264,7 @@ export default function App() {
       localStorage.setItem("kbr_session_user_data", JSON.stringify(loggedUser));
 
       // Refresh semua state dari localStorage saat login ulang
+      setSettings(db.get("settings"));
       setIncomingLetters(db.get("incoming_letters"));
       setOutgoingLetters(db.get("outgoing_letters"));
       setCertificates(db.get("certificates"));

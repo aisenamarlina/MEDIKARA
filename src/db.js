@@ -158,20 +158,17 @@ export const sanitizeUsers = (users) => {
   let changed = false;
   let list = normalized.map(u => {
     if (u.username === 'admin') {
-      if (u.name !== 'Admin' || u.role !== 'Administrator' || u.email !== 'kbaiturrahmangarut@gmail.com') {
-        changed = true;
-        return {
-          ...u,
-          id: u.id || 'usr-001',
-          username: 'admin',
-          password: u.password || 'admin',
-          name: 'Admin',
-          role: 'Administrator',
-          department: 'Unit IT',
-          email: 'kbaiturrahmangarut@gmail.com',
-          avatarColor: '#0d9488'
-        };
-      }
+      return {
+        ...u,
+        id: u.id || 'usr-001',
+        username: 'admin',
+        password: u.password || 'admin',
+        name: u.name || 'Admin',
+        role: u.role || 'Administrator',
+        department: u.department || 'Unit IT',
+        email: u.email || 'kbaiturrahmangarut@gmail.com',
+        avatarColor: u.avatarColor || '#0d9488'
+      };
     }
     if (u.username === 'allisa') {
       changed = true;
@@ -274,11 +271,14 @@ const lsSet = (key, data, skipBroadcast = false) => {
 const pushToServer = async (key, data) => {
   try {
     const cleaned = cleanForStorageAndFirebase(data);
-    await fetch(`/api/store/${key}`, {
+    const res = await fetch(`/api/store/${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cleaned)
     });
+    if (!res.ok) {
+      console.warn(`[MEDIKARA] pushToServer("${key}") returned HTTP status: ${res.status}`);
+    }
   } catch (err) {
     // Mode offline / server backend sedang starting
   }
@@ -353,8 +353,24 @@ export const initDB = async () => {
       const serverData = await res.json();
       for (const [k, v] of Object.entries(serverData)) {
         if (v !== undefined && v !== null) {
-          const normalized = normalizeCollection(k, v);
-          lsSet(k, normalized, true);
+          if (k === 'settings') {
+            const localSettings = lsGet('settings', defaultSettings);
+            const mergedSettings = {
+              ...defaultSettings,
+              ...localSettings,
+              ...v,
+              signature: v.signature || localSettings.signature || defaultSettings.signature,
+              stamp: v.stamp || localSettings.stamp || defaultSettings.stamp,
+              logo: v.logo || localSettings.logo || defaultSettings.logo || '/logo.png'
+            };
+            lsSet('settings', mergedSettings, true);
+            if (!v.signature || !v.stamp) {
+              pushToServer('settings', mergedSettings);
+            }
+          } else {
+            const normalized = normalizeCollection(k, v);
+            lsSet(k, normalized, true);
+          }
         }
       }
       console.log('[MEDIKARA] Data berhasil dimuat langsung dari PostgreSQL (Neon Database)');

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { FileText, File, FolderOpen, Shield, Database, Upload, Save, Image as ImageIcon, RefreshCw, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { db } from '../db';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm }) {
   const [activeTab, setActiveTab] = useState('profil');
@@ -158,20 +159,37 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (e, field) => {
+  const handleFileUpload = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Ukuran file terlalu besar! Maksimal 2MB.", type: 'error' } }));
+    if (file.size > 10 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Ukuran file terlalu besar! Maksimal 10MB.", type: 'error' } }));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      handleChange(field, event.target.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      let maxW = 600, maxH = 600;
+      if (field === 'signature') { maxW = 600; maxH = 300; }
+      else if (field === 'stamp') { maxW = 400; maxH = 400; }
+      else if (field === 'logo') { maxW = 400; maxH = 400; }
+
+      const compressed = await compressImage(file, maxW, maxH, 0.85);
+      if (!compressed) return;
+
+      handleChange(field, compressed);
+      
+      // Auto-save langsung ke database & cloud agar tidak hilang saat logout/refresh
+      const updatedForm = { ...formData, [field]: compressed };
+      onSave(updatedForm);
+      const fieldLabel = field === 'signature' ? 'Tanda Tangan Pimpinan' : field === 'stamp' ? 'Stempel Klinik' : 'Logo Klinik';
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: `${fieldLabel} berhasil diperbarui dan disimpan permanen!`, type: 'success' } 
+      }));
+    } catch (err) {
+      console.error('File upload error:', err);
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Gagal memproses file gambar!", type: 'error' } }));
+    }
   };
 
   const handleSave = () => {
