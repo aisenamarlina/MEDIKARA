@@ -85,8 +85,8 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       return;
     }
 
-    const correctPin = String(formData.specialAccessPin || settings?.specialAccessPin || '12345');
-    const isCorrect = (enteredPin === correctPin) || (enteredPin === '12345') || (enteredPin === '11111');
+    const correctPin = String(formData.specialAccessPin || settings?.specialAccessPin || '21721');
+    const isCorrect = (enteredPin === correctPin) || (enteredPin === '21721');
 
     if (isCorrect) {
       const updated = { ...unlockedFeatures, [selectedFeature]: true };
@@ -101,7 +101,7 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       }));
       handleClosePinModal();
     } else {
-      setPinError('PIN salah! Silakan coba lagi (Default: 12345)');
+      setPinError('PIN salah! Silakan coba lagi (PIN: 21721)');
     }
   };
 
@@ -973,12 +973,12 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
             <div style={{ padding: '1rem 1.25rem', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
                 <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>PIN Akses Khusus (Gudang & Aset Tetap)</h4>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>PIN 5-digit untuk membuka menu Gudang Umum dan Aset Tetap (Default: 12345)</p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>PIN 5-digit untuk membuka menu Gudang Umum dan Aset Tetap (PIN: 21721)</p>
               </div>
               <input 
                 type="text" 
                 maxLength={5}
-                value={formData.specialAccessPin || '12345'} 
+                value={formData.specialAccessPin || '21721'} 
                 onChange={(e) => handleChange('specialAccessPin', e.target.value.replace(/\D/g, ''))} 
                 style={{ width: '100px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', letterSpacing: '4px', fontWeight: 700, fontSize: '1rem', color: '#0d652d' }} 
               />

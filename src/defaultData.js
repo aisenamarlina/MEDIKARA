@@ -19,7 +19,8 @@ export const defaultSettings = {
   numFormatCert: "{NO}/SERT/KBR/{BULAN_ROMAWI}/{TAHUN}",
   numFormatIn: "BM-{NO}/{BULAN_ROMAWI}/{TAHUN}",
   numFormatOut: "BK-{NO}/{BULAN_ROMAWI}/{TAHUN}",
-  numFormatBorrow: "PMJ-{NO}/{BULAN_ROMAWI}/{TAHUN}"
+  numFormatBorrow: "PMJ-{NO}/{BULAN_ROMAWI}/{TAHUN}",
+  specialAccessPin: "21721"
 };
 
 export const defaultSequences = {
