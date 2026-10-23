@@ -2393,6 +2393,8 @@ export default function App() {
         cloneEl.style.width = isLandscape ? '297mm' : '210mm';
         cloneEl.style.minWidth = isLandscape ? '297mm' : '210mm';
         cloneEl.style.maxWidth = isLandscape ? '297mm' : '210mm';
+        const isSOPDocInClone = cloneEl.querySelector('.sop-table') !== null;
+        cloneEl.style.padding = isSOPDocInClone ? '12mm 14mm' : (isLandscape ? '0' : '20mm');
         if (isLandscape) {
           cloneEl.style.height = 'auto';
           cloneEl.style.minHeight = '210mm';
@@ -2427,7 +2429,7 @@ export default function App() {
         const cRect = cloneEl.getBoundingClientRect();
         const detected = [];
         const rawAtomic = isSOPDoc
-          ? cloneEl.querySelectorAll('.sop-table > tbody > tr, .sop-table > tr')
+          ? cloneEl.querySelectorAll('.sop-table > tbody > tr, .sop-table > tr, .sop-atomic-row, .sop-item-step, .sop-table tr td > div')
           : cloneEl.querySelectorAll('.pdf-atomic, tr, img, p, h1, h2, h3, h4, h5, h6');
 
         rawAtomic.forEach(el => {
@@ -2458,8 +2460,9 @@ export default function App() {
       return pdf;
     }
 
+    const isSOPDocument = currentPrintDoc?.templateType === 'SOP' || currentPrintDoc?.typeCode === 'SOP' || currentPrintDoc?.sopData !== undefined;
     const fullPageHeightCanvas = (pdfH / pdfW) * canvas.width;
-    const marginMm             = 18;
+    const marginMm             = isSOPDocument ? 10 : 18;
     const marginCanvas         = Math.round((marginMm / pdfW) * canvas.width);
     const bottomMarginCanvas   = Math.round((marginMm / pdfH) * fullPageHeightCanvas);
 
@@ -2471,6 +2474,8 @@ export default function App() {
     const findSafeCutCanvas = (targetEnd, fromY) => {
       if (targetEnd >= canvas.height) return canvas.height;
 
+      const pageUsableH = fullPageHeightCanvas - marginCanvas - bottomMarginCanvas;
+
       // 1. Cek apakah targetEnd membelah elemen atomik (top < targetEnd && bottom > targetEnd)
       for (let i = 0; i < leafPositions.length; i++) {
         const { top: lTop, bottom: lBot, height: lH } = leafPositions[i];
@@ -2479,9 +2484,18 @@ export default function App() {
 
         if (lBot > targetEnd) {
           // Jika tinggi elemen atomik melebihi tinggi satu halaman penuh (sangat jarang), potong di targetEnd
-          if (lH > (fullPageHeightCanvas - marginCanvas - bottomMarginCanvas)) {
+          if (lH > pageUsableH) {
             return Math.round(targetEnd);
           }
+
+          // Cegah ruang kosong ("ngegantung") berlebihan:
+          // Jika memotong di lTop akan membuang lebih dari 40% dari tinggi halaman yang bisa dipakai,
+          // jangan potong di lTop melainkan potong di targetEnd agar konten tidak melompat meninggalkan halaman kosong!
+          const unusedSpace = targetEnd - lTop;
+          if (unusedSpace > (pageUsableH * 0.40) && (lTop - fromY) < (pageUsableH * 0.60)) {
+            return Math.round(targetEnd);
+          }
+
           // Elemen ini terbelah jika dipotong di targetEnd! Potong tepat di batas atas elemen ini
           const safeCut = Math.round(lTop);
           if (safeCut > fromY + (30 * SCALE)) {
@@ -2919,7 +2933,7 @@ export default function App() {
             maxWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
             height: 'auto',
             minHeight: currentPrintType === 'cert' ? '210mm' : '297mm',
-            padding: currentPrintType === 'cert' ? '0' : '20mm', 
+            padding: currentPrintType === 'cert' ? '0' : (currentPrintDoc?.templateType === 'SOP' || currentPrintDoc?.typeCode === 'SOP') ? '12mm 14mm' : '20mm', 
             boxShadow: '0 4px 20px rgba(0,0,0,0.2)', 
             color: '#000', 
             fontFamily: currentPrintType === 'letter' ? 'Calibri, sans-serif' : 'serif',
@@ -3055,7 +3069,7 @@ export default function App() {
                         </td>
                       </tr>
 
-                      {/* Dynamic Sections Loop */}
+                      {/* Dynamic Sections Loop - Tiap langkah/baris dirender sebagai baris tabel terpisah agar bisa mengalir antar halaman tanpa ngegantung */}
                       {(currentPrintDoc.sopData?.sections || [
                         { title: "Pengertian", items: [currentPrintDoc.sopData?.pengertian || ""] },
                         { title: "Tujuan", items: [currentPrintDoc.sopData?.tujuan || ""] },
@@ -3065,24 +3079,41 @@ export default function App() {
                         { title: "Hal-Hal yang Perlu Diperhatikan", items: [currentPrintDoc.sopData?.halDiperhatikan || ""] },
                         { title: "Unit Terkait", items: [currentPrintDoc.sopData?.unitTerkait || ""] },
                         { title: "Dokumen Terkait", items: [currentPrintDoc.sopData?.dokumenTerkait || ""] }
-                      ]).map((section, idx) => {
-                        if (!section.title && (!section.items || section.items.join('').trim() === '')) return null;
+                      ]).flatMap((section, idx) => {
+                        if (!section.title && (!section.items || section.items.join('').trim() === '')) return [];
+                        const validItems = (section.items && section.items.length > 0) ? section.items : [""];
                         
-                        return (
-                          <tr key={idx} className="pdf-atomic">
-                            <td style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', verticalAlign: 'top', fontWeight: 'bold', fontSize: '10pt', color: '#000' }}>
-                              {idx + 1}.&nbsp;&nbsp;{section.title}
-                            </td>
-                            <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'justify', fontSize: '10pt', color: '#000' }}>
-                              {section.items.map((item, iIdx) => (
-                                <div key={iIdx} style={{ display: 'flex', gap: '0.45rem', marginBottom: section.items.length > 1 ? '0.35rem' : '0', alignItems: 'flex-start' }}>
-                                  {section.items.length > 1 && <span style={{ minWidth: '18px', fontWeight: 'normal' }}>{iIdx + 1}.</span>}
+                        return validItems.map((item, iIdx) => {
+                          const isFirst = iIdx === 0;
+                          const isLast = iIdx === validItems.length - 1;
+
+                          return (
+                            <tr key={`${idx}-${iIdx}`} className="pdf-atomic sop-atomic-row">
+                              <td style={{ 
+                                border: '0.5px solid #000000', 
+                                borderTop: isFirst ? '0.5px solid #000000' : 'none',
+                                borderBottom: isLast ? '0.5px solid #000000' : 'none',
+                                padding: isFirst ? '0.45rem 0.65rem' : '0.2rem 0.65rem', 
+                                verticalAlign: 'top', 
+                                fontWeight: isFirst ? 'bold' : 'normal', 
+                                fontSize: isFirst ? '10pt' : '8.5pt', 
+                                color: isFirst ? '#000' : '#4b5563' 
+                              }}>
+                                {isFirst ? (
+                                  `${idx + 1}.  ${section.title}`
+                                ) : (
+                                  <span style={{ fontStyle: 'italic', opacity: 0.8 }}>({section.title} lanj.)</span>
+                                )}
+                              </td>
+                              <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'justify', fontSize: '10pt', color: '#000' }}>
+                                <div className="sop-item-step" style={{ display: 'flex', gap: '0.45rem', alignItems: 'flex-start' }}>
+                                  {validItems.length > 1 && <span style={{ minWidth: '18px', fontWeight: 'bold' }}>{iIdx + 1}.</span>}
                                   <span style={{ flex: 1, whiteSpace: 'pre-line', textAlign: 'justify' }}>{item}</span>
                                 </div>
-                              ))}
-                            </td>
-                          </tr>
-                        );
+                              </td>
+                            </tr>
+                          );
+                        });
                       })}
 
                       {/* Bagan Alir (Image) */}
