@@ -8607,16 +8607,46 @@ export default function App() {
           {/* 8. Warehouse Stock management */}
           {activeMenu === "warehouse" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-               
-            <InventarisGudang 
-              warehouseItems={warehouseItems}
-              stockInForm={stockInForm}
-              setStockInForm={setStockInForm}
-              handleStockIn={handleStockIn}
-              stockOutForm={stockOutForm}
-              setStockOutForm={setStockOutForm}
-              handleStockOut={handleStockOut}
-            />
+              {(() => {
+                const isUnlocked = (() => {
+                  try {
+                    return Boolean(JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{}')?.gudang);
+                  } catch { return false; }
+                })();
+
+                if (!isUnlocked) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                      <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                        <Lock size={34} />
+                      </div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Gudang Umum Terkunci</h3>
+                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                        Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu('settings')}
+                        style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                      >
+                        Buka di Pengaturan Akses Khusus
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <InventarisGudang 
+                    warehouseItems={warehouseItems}
+                    stockInForm={stockInForm}
+                    setStockInForm={setStockInForm}
+                    handleStockIn={handleStockIn}
+                    stockOutForm={stockOutForm}
+                    setStockOutForm={setStockOutForm}
+                    handleStockOut={handleStockOut}
+                  />
+                );
+              })()}
             </div>
           )}
 
@@ -8696,9 +8726,37 @@ export default function App() {
 
           {(activeMenu === "requests" || activeMenu === "borrowings") && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-               
+              {(() => {
+                const isUnlocked = (() => {
+                  try {
+                    return Boolean(JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{}')?.gudang);
+                  } catch { return false; }
+                })();
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                if (!isUnlocked) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                      <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                        <Lock size={34} />
+                      </div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Permintaan Keluar Terkunci</h3>
+                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                        Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu('settings')}
+                        style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                      >
+                        Buka di Pengaturan Akses Khusus
+                      </button>
+                    </div>
+                  );
+                }
+
+                return null;
+              })() || (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Form Input Permintaan Keluar */}
                 <div className="elegant-card elegant-table-container">
                   {/* Form Type Switcher Header */}
@@ -8972,6 +9030,7 @@ export default function App() {
                   </table>
                 </div>
               </div>
+              )}
             </div>
           )}
 
