@@ -1353,15 +1353,15 @@ export default function App() {
     kakData: { judulProgram: "", nomor: "", pendahuluan: "", latarBelakang: "", tujuanUmum: "", tujuanKhusus: "", kegiatanPokok: [{ pokok: "", rincian: [""] }], caraMelaksanakan: "", sasaran: "", jadwal: [{ kegiatan: "", bulan: Array(12).fill(false) }], evaluasi: "", pencatatan: "", pembiayaan: "" }
   });
 
-  // Auto-generate docNo when typeCode, unitCode or date changes
+  // Auto-generate docNo when typeCode, unitCode or date changes (hanya jika bukan mode edit)
   useEffect(() => {
-    // Generate next sequence number based on current total letters this year
+    if (letterForm.id) return; // Mode edit surat: pertahankan nomor dokumen aslinya!
     const d = new Date(letterForm.date);
     const yearLetters = outgoingLetters.filter(l => new Date(l.date).getFullYear() === d.getFullYear());
     const nextSeq = yearLetters.length + 1;
     const generatedNo = generateSuratNumber(nextSeq, letterForm.typeCode, letterForm.unitCode, letterForm.date);
     setLetterForm(prev => ({ ...prev, docNo: generatedNo }));
-  }, [letterForm.typeCode, letterForm.unitCode, letterForm.date, outgoingLetters]);
+  }, [letterForm.typeCode, letterForm.unitCode, letterForm.date, letterForm.id, outgoingLetters]);
   const romanize = (num) => {
     const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
     let roman = '', i;
@@ -1375,24 +1375,32 @@ export default function App() {
   };
   const handleCreateLetter = (e, letterData = letterForm) => {
       e.preventDefault();
-      openConfirm("Apakah Anda yakin ingin membuat Surat Keluar ini?", () => {
+      const isEditing = Boolean(letterData.id && outgoingLetters.some(l => l.id === letterData.id));
+      const confirmMsg = isEditing
+        ? `Apakah Anda yakin ingin menyimpan perubahan pada dokumen [${letterData.docNo || 'Surat'}] ini?`
+        : "Apakah Anda yakin ingin membuat Surat Keluar ini?";
+
+      openConfirm(confirmMsg, () => {
         const typeObj = letterTypes.find(t => t.code === letterData.typeCode || t.name === letterData.typeCode || t.name === letterData.templateType);
         const templateType = typeObj ? typeObj.code : (letterData.typeCode || "SB");
         const templateTypeName = typeObj ? typeObj.name : (letterData.templateType || "Surat Keluar");
         const docNo = letterData.docNo;
-        const newLetter = {
+        const letterId = isEditing ? letterData.id : ("SU-" + Date.now());
+
+        const savedLetter = {
           ...letterData,
-          id: "SU-" + Date.now(),
+          id: letterId,
           docNo,
           date: letterData.date || new Date().toISOString().split('T')[0],
           createdAt: letterData.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           typeCode: letterData.typeCode || (typeObj ? typeObj.code : "SB"),
           templateType,
           templateTypeName,
-          destination: letterData.destination,
-          recipientName: letterData.recipientName,
-          subject: letterData.subject,
-          content: letterData.content,
+          destination: letterData.destination || "",
+          recipientName: letterData.recipientName || "",
+          subject: letterData.subject || "",
+          content: letterData.content || "",
           skData: letterData.typeCode === "SKep" ? (letterData.skData || null) : null,
           pedomanData: letterData.typeCode === "Pdm" ? (letterData.pedomanData || null) : null,
           sopData: letterData.typeCode === "SOP" ? (letterData.sopData || null) : null,
@@ -1411,22 +1419,26 @@ export default function App() {
           leftSignatoryTitle: letterData.leftSignatoryTitle || "",
           signeeCount: letterData.signeeCount || ((letterData.leftSignatoryName || letterData.leftSignatoryTitle) ? 2 : 1),
           kopType: letterData.kopType || "direktur",
-          attachments: letterData.attachments,
+          attachments: letterData.attachments || "-",
           useDigitalSignature: letterData.useDigitalSignature !== false,
           useDigitalStamp: letterData.useDigitalStamp !== false,
           status: "Selesai"
         };
-            setOutgoingLetters(prev => {
-              const updated = [newLetter, ...prev];
-              db.set("outgoing_letters", updated);
-              return updated;
-            });
-            db.addLog(`Membuat Surat Keluar`, "Persuratan", `No: ${docNo}, Perihal: ${letterData.subject}`);
-            setActivityLogs(db.get("activity_logs"));
-            setCurrentPrintDoc(newLetter);
-            setCurrentPrintType("letter");
-            setLetterForm({ docNo: "", date: new Date().toISOString().split('T')[0], typeCode: "SB", destination: "", subject: "", content: "", attachments: [], skData: null, pedomanData: null, sopData: null, kakData: null, stData: null });
-            window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Surat keluar berhasil dibuat!", type: 'success' } }));
+        setOutgoingLetters(prev => {
+          const updated = isEditing
+            ? prev.map(l => l.id === letterId ? savedLetter : l)
+            : [savedLetter, ...prev];
+          db.set("outgoing_letters", updated);
+          return updated;
+        });
+        db.addLog(isEditing ? `Ubah Surat Keluar` : `Membuat Surat Keluar`, "Persuratan", `No: ${docNo}, Perihal: ${letterData.subject}`);
+        setActivityLogs(db.get("activity_logs"));
+        setCurrentPrintDoc(savedLetter);
+        setCurrentPrintType("letter");
+        setLetterForm({ docNo: "", date: new Date().toISOString().split('T')[0], typeCode: "SB", destination: "", subject: "", content: "", attachments: [], skData: null, pedomanData: null, sopData: null, kakData: null, stData: null });
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: isEditing ? `Perubahan dokumen [${docNo}] berhasil disimpan!` : "Surat keluar berhasil dibuat!", type: 'success' } 
+        }));
       });
     };
 

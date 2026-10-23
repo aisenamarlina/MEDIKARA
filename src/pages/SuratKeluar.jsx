@@ -369,8 +369,67 @@ const SuratKeluar = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {/* Form Buat Surat */}
-        <div className="elegant-card elegant-table-container">
-          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', color: 'var(--primary)' }}>Buat Surat Resmi (Smart Form)</h3>
+        <div id="form-buat-surat" className="elegant-card elegant-table-container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem', borderBottom: letterForm.id ? '2px solid var(--primary)' : 'none', paddingBottom: letterForm.id ? '0.75rem' : '0' }}>
+            <div>
+              <h3 style={{ fontWeight: 700, margin: 0, color: 'var(--primary)' }}>
+                {letterForm.id ? `✏️ Edit Dokumen: ${letterForm.docNo}` : 'Buat Surat Resmi (Smart Form)'}
+              </h3>
+              {letterForm.id && (
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Perihal: <strong>{letterForm.subject || letterForm.sopData?.judulSop || '-'}</strong> (Mengedit dokumen di form utama)
+                </p>
+              )}
+            </div>
+            {letterForm.id && (
+              <button
+                type="button"
+                onClick={() => {
+                  const initialTemplate = getTemplateData("SKet");
+                  setLetterForm({
+                    docNo: "",
+                    typeCode: "SKet",
+                    unitCode: "01-10.0",
+                    destination: "",
+                    recipientName: "",
+                    subject: initialTemplate.subject,
+                    content: initialTemplate.content,
+                    attachments: "-",
+                    signatory: "",
+                    title: "",
+                    tembusan: [""],
+                    leftSignatoryName: "",
+                    leftSignatoryTitle: "",
+                    signeeCount: 1,
+                    kopType: "direktur",
+                    date: new Date().toISOString().split('T')[0],
+                    useDigitalSignature: true,
+                    useDigitalStamp: true,
+                    skData: { tentang: "", menimbang: [""], mengingat: [""], menetapkan: "", keputusan: [{ key: "KESATU", value: "" }] },
+                    pedomanData: { lampiranNomor: "", lampiranTentang: "", babs: [{ title: "PENDAHULUAN", points: ["Latar Belakang\n...", "Maksud dan Tujuan\n...", "Sasaran\n...", "Asas\n...", "Ruang Lingkup\n...", "Pengertian Umum\n..."] }] },
+                    sopData: { judulSop: "", noDokumen: "", noRevisi: "", tanggalTerbit: "", halaman: "", pengertian: "", tujuan: "", kebijakan: "", referensi: "", langkahLangkah: [""], baganAlir: [""], halDiperhatikan: "", unitTerkait: "", dokumenTerkait: "", rekamHistoris: [{ no: "1", yangDiubah: "", isiPerubahan: "", tanggalMulai: "" }] },
+                    kakData: { judulProgram: "", nomor: "", pendahuluan: "", latarBelakang: "", tujuanUmum: "", tujuanKhusus: "", kegiatanPokok: [{ pokok: "", rincian: [""] }], caraMelaksanakan: "", sasaran: "", jadwal: [{ kegiatan: "", bulan: Array(12).fill(false) }], evaluasi: "", pencatatan: "", pembiayaan: "" }
+                  });
+                  window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Mode edit dibatalkan, kembali ke form baru.", type: 'info' } }));
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '6px',
+                  border: '1px solid #f87171',
+                  backgroundColor: '#fef2f2',
+                  color: '#b91c1c',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Batal Edit &amp; Buat Dokumen Baru
+              </button>
+            )}
+          </div>
           <form onSubmit={onFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
             {/* Jenis Surat + Unit Pengeluar */}
@@ -1712,8 +1771,18 @@ const SuratKeluar = ({
               </div>
             )}
 
-            <button type="submit" className="btn-primary" style={{ padding: '0.85rem', marginTop: '0.5rem' }}>
-              Buat &amp; Lihat Dokumen PDF
+            <button 
+              type="submit" 
+              className="btn-primary" 
+              style={{ 
+                padding: '0.85rem', 
+                marginTop: '0.5rem', 
+                backgroundColor: letterForm.id ? '#15803d' : undefined,
+                fontWeight: 700,
+                fontSize: '0.95rem'
+              }}
+            >
+              {letterForm.id ? `💾 Simpan Perubahan Dokumen (${letterForm.docNo})` : 'Buat & Lihat Dokumen PDF'}
             </button>
           </form>
         </div>
@@ -1761,7 +1830,26 @@ const SuratKeluar = ({
                     <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                       <button title="Preview Surat" onClick={() => { setCurrentPrintDoc(l); setCurrentPrintType("letter"); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'var(--primary-light)', color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#d1fae5'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--primary-light)'}><Eye size={14} /></button>
                       <button title="Download / Cetak PDF" onClick={() => { setCurrentPrintDoc(l); setCurrentPrintType("letter"); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--primary-dark)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--primary)'}><Download size={14} /></button>
-                      <button title="Edit Surat" onClick={() => setLetterModal({ isOpen: true, type: "out", action: "edit", data: l })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'var(--border-light)', color: 'var(--text-dark)', cursor: 'pointer', transition: 'all 0.2s' }}><Edit3 size={14} /></button>
+                      <button 
+                        title="Edit Dokumen di Form Utama" 
+                        onClick={() => {
+                          setLetterForm({ ...l });
+                          const formEl = document.getElementById('form-buat-surat');
+                          if (formEl) {
+                            formEl.scrollIntoView({ behavior: 'smooth' });
+                          } else {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                          window.dispatchEvent(new CustomEvent('app-toast', { 
+                            detail: { message: `Memuat [${l.docNo}] ke form utama untuk diedit`, type: 'info' } 
+                          }));
+                        }} 
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: 'var(--border-light)', color: 'var(--text-dark)', cursor: 'pointer', transition: 'all 0.2s' }}
+                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                        onMouseOut={e => e.currentTarget.style.backgroundColor = 'var(--border-light)'}
+                      >
+                        <Edit3 size={14} />
+                      </button>
                       <button title="Hapus Surat" onClick={() => handleDeleteOutgoingLetter(l.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor = '#fecaca'} onMouseOut={e => e.currentTarget.style.backgroundColor = '#fee2e2'}><Trash2 size={14} /></button>
                     </div>
                   </td>
