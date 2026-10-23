@@ -2662,13 +2662,13 @@ export default function App() {
       }
     }
 
-    // Nomor Halaman Resmi di Bagian Bawah untuk SEMUA dokumen (termasuk SOP)
+    // Nomor Halaman Resmi di Bagian Bawah: langsung format "X dari Y" tanpa kata "Halaman"
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8.5);
       pdf.setTextColor(100, 116, 139);
-      pdf.text(`Halaman ${i} dari ${totalPages}`, pdfW / 2, pdfH - 5, { align: 'center' });
+      pdf.text(`${i} dari ${totalPages}`, pdfW / 2, pdfH - 5, { align: 'center' });
     }
 
     return pdf;
