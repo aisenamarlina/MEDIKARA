@@ -2470,11 +2470,51 @@ export default function App() {
       { top: 0, bottom: canvas.height, height: canvas.height }
     ];
 
-    // ── Algoritma Pemotongan Halaman Aman Tanpa Potong Teks / Tabel ─────────
+    // ── Scanner Celah Baris Bersih (Mencari spasi putih antar baris teks agar teks tidak terbelah di tengah huruf) ──
+    const findCleanLineCut = (targetY, minY) => {
+      try {
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const searchRange = Math.round(28 * SCALE);
+        const searchTop = Math.max(Math.round(minY + (10 * SCALE)), Math.round(targetY - searchRange));
+        const searchBot = Math.min(canvas.height - 1, Math.round(targetY));
+        if (searchBot <= searchTop) return Math.round(targetY);
+
+        const sampleX = Math.round(canvas.width * 0.15);
+        const sampleW = Math.round(canvas.width * 0.70);
+
+        let bestY = searchBot;
+        let minDarkCount = Infinity;
+
+        for (let y = searchBot; y >= searchTop; y--) {
+          const rowData = ctx.getImageData(sampleX, y, sampleW, 1).data;
+          let darkCount = 0;
+          for (let i = 0; i < rowData.length; i += 4) {
+            if (rowData[i] < 215 || rowData[i+1] < 215 || rowData[i+2] < 215) {
+              darkCount++;
+            }
+          }
+          // Jika baris ini benar-benar celah putih bersih antar baris teks
+          if (darkCount === 0) {
+            return y;
+          }
+          if (darkCount < minDarkCount) {
+            minDarkCount = darkCount;
+            bestY = y;
+          }
+        }
+        return bestY;
+      } catch (err) {
+        console.warn('findCleanLineCut error, fallback to targetY', err);
+        return Math.round(targetY);
+      }
+    };
+
+    // ── Algoritma Pemotongan Halaman Cerdas Tanpa Potong Teks & Tanpa Halaman Kosong (Anti Ngegantung) ─────────
     const findSafeCutCanvas = (targetEnd, fromY) => {
       if (targetEnd >= canvas.height) return canvas.height;
 
       const pageUsableH = fullPageHeightCanvas - marginCanvas - bottomMarginCanvas;
+      const maxWastedH  = 45 * SCALE; // Maksimal ruang kosong yang diizinkan sebelum beralih ke potong celah baris teks
 
       // 1. Cek apakah targetEnd membelah elemen atomik (top < targetEnd && bottom > targetEnd)
       for (let i = 0; i < leafPositions.length; i++) {
@@ -2483,29 +2523,25 @@ export default function App() {
         if (lTop >= targetEnd) break;
 
         if (lBot > targetEnd) {
-          // Jika tinggi elemen atomik melebihi tinggi satu halaman penuh (sangat jarang), potong di targetEnd
-          if (lH > pageUsableH) {
-            return Math.round(targetEnd);
+          const unusedIfPush = targetEnd - lTop;
+
+          // Jika memotong di lTop akan membuang ruang berlebihan (> maxWastedH), JANGAN potong di lTop!
+          // Karena jika dipotong di lTop, halaman akan kosong melompong (ngegantung).
+          // Sebaliknya, potong bersih di celah antar baris teks mendekati targetEnd!
+          if (unusedIfPush > maxWastedH || lH > pageUsableH) {
+            return findCleanLineCut(targetEnd, lTop);
           }
 
-          // Cegah ruang kosong ("ngegantung") berlebihan:
-          // Jika memotong di lTop akan membuang lebih dari 40% dari tinggi halaman yang bisa dipakai,
-          // jangan potong di lTop melainkan potong di targetEnd agar konten tidak melompat meninggalkan halaman kosong!
-          const unusedSpace = targetEnd - lTop;
-          if (unusedSpace > (pageUsableH * 0.40) && (lTop - fromY) < (pageUsableH * 0.60)) {
-            return Math.round(targetEnd);
-          }
-
-          // Elemen ini terbelah jika dipotong di targetEnd! Potong tepat di batas atas elemen ini
+          // Elemen ini baru saja mulai dekat batas bawah, aman dipotong di atasnya
           const safeCut = Math.round(lTop);
           if (safeCut > fromY + (30 * SCALE)) {
             return safeCut;
           }
-          return Math.round(targetEnd);
+          return findCleanLineCut(targetEnd, fromY);
         }
       }
 
-      // 2. Jika tidak ada yang terbelah persis, cari elemen terakhir yang muat
+      // 2. Jika tidak ada elemen yang membelah targetEnd, cari batas elemen terdekat
       let lastFitBot = fromY;
       for (let i = 0; i < leafPositions.length; i++) {
         const { top: lTop, bottom: lBot } = leafPositions[i];
@@ -2516,11 +2552,11 @@ export default function App() {
         }
       }
 
-      if (lastFitBot > fromY + (30 * SCALE)) {
+      if (lastFitBot > fromY + (30 * SCALE) && (targetEnd - lastFitBot) <= maxWastedH) {
         return Math.round(lastFitBot);
       }
 
-      return Math.round(targetEnd);
+      return findCleanLineCut(targetEnd, fromY);
     };
 
     // ── Generate Halaman-Halaman PDF ───────────────────────────────
@@ -2565,8 +2601,30 @@ export default function App() {
       sc.fillStyle = '#ffffff';
       sc.fillRect(0, 0, sl.width, sl.height);
 
-      // Gambar potongan konten dokumen alami tanpa garis buatan
+      // Gambar potongan konten dokumen alami
       sc.drawImage(canvas, 0, currentY, canvas.width, sliceH, 0, destY, canvas.width, sliceH);
+
+      // Jika dokumen SOP dan terbelah antar halaman, tutup garis batas tabel agar rapi
+      if (isSOPDocument) {
+        const tableMarginX = Math.round((14 / pdfW) * canvas.width);
+        const tableRightX  = canvas.width - tableMarginX;
+        sc.strokeStyle = '#000000';
+        sc.lineWidth = 1;
+        // Tutup garis bawah tabel jika halaman ini bukan halaman terakhir
+        if (cutY < canvas.height && cutY < maxContentBottom - (10 * SCALE)) {
+          sc.beginPath();
+          sc.moveTo(tableMarginX, destY + sliceH);
+          sc.lineTo(tableRightX, destY + sliceH);
+          sc.stroke();
+        }
+        // Beri garis penutup atas jika halaman lanjutan (pageIdx > 0)
+        if (pageIdx > 0) {
+          sc.beginPath();
+          sc.moveTo(tableMarginX, destY);
+          sc.lineTo(tableRightX, destY);
+          sc.stroke();
+        }
+      }
 
       pdf.addImage(sl.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
       currentY = cutY;
