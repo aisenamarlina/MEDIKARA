@@ -2339,6 +2339,7 @@ export default function App() {
     const printW    = Math.max(printArea.scrollWidth, printArea.offsetWidth, targetW);
 
     let cloneLeafPositions = [];
+    let cloneSopHalamanBoxMm = null;
     const SCALE = 2.5;
 
     // ── Capture printArea dengan html2canvas (Presisi Tinggi & Standar A4) ──
@@ -2442,6 +2443,19 @@ export default function App() {
         });
         detected.sort((a, b) => a.top - b.top);
         cloneLeafPositions = detected;
+
+        // Rekam koordinat kotak teks Halaman di header SOP untuk diisi nomor halaman akurat
+        const halEl = cloneEl.querySelector('.sop-halaman-val');
+        if (halEl && cRect.width > 0) {
+          const hr = halEl.getBoundingClientRect();
+          const pdfDocWidth = isLandscape ? 297 : 210;
+          cloneSopHalamanBoxMm = {
+            x: (hr.left - cRect.left) * (pdfDocWidth / cRect.width),
+            y: (hr.top - cRect.top) * (pdfDocWidth / cRect.width),
+            w: hr.width * (pdfDocWidth / cRect.width),
+            h: hr.height * (pdfDocWidth / cRect.width),
+          };
+        }
       },
     });
 
@@ -2631,16 +2645,30 @@ export default function App() {
       pageIdx++;
     }
 
-    // ── Nomor Halaman Resmi di Bagian Bawah (Kecuali SOP karena sudah ada di Header Box) ──
-    const isSOP = currentPrintDoc?.templateType === 'SOP' || currentPrintDoc?.typeCode === 'SOP';
-    if (!isSOP) {
-      const totalPages = pageIdx;
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8.5);
-        pdf.setTextColor(100, 116, 139);
-        pdf.text(`Halaman ${i} dari ${totalPages}`, pdfW / 2, pdfH - 8, { align: 'center' });
+    const totalPages = pageIdx;
+
+    // Perbarui nomor halaman di dalam Kotak Header SOP Halaman 1 agar dinamis sesuai total halaman asli
+    if (isSOPDocument && cloneSopHalamanBoxMm) {
+      try {
+        pdf.setPage(1);
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(cloneSopHalamanBoxMm.x - 0.5, cloneSopHalamanBoxMm.y, Math.max(cloneSopHalamanBoxMm.w + 12, 22), cloneSopHalamanBoxMm.h, 'F');
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9.5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`1 dari ${totalPages}`, cloneSopHalamanBoxMm.x, cloneSopHalamanBoxMm.y + cloneSopHalamanBoxMm.h - 1.2);
+      } catch (err) {
+        console.warn('Gagal update header box halaman SOP:', err);
       }
+    }
+
+    // Nomor Halaman Resmi di Bagian Bawah untuk SEMUA dokumen (termasuk SOP)
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Halaman ${i} dari ${totalPages}`, pdfW / 2, pdfH - 5, { align: 'center' });
     }
 
     return pdf;
@@ -3067,7 +3095,7 @@ export default function App() {
                           <div style={{ display: 'flex', alignItems: 'center' }}>
                             <span style={{ width: '110px' }}>Halaman</span>
                             <span>:&nbsp;&nbsp;</span>
-                            <span>{currentPrintDoc.sopData?.halaman || '1 dari 2'}</span>
+                            <span className="sop-halaman-val">{currentPrintDoc.sopData?.halaman || '1 dari 1'}</span>
                           </div>
                         </td>
                       </tr>
