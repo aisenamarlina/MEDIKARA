@@ -5979,49 +5979,75 @@ export default function App() {
 
               {/* ====== KOP / HEADER RESMI ====== */}
               {(currentPrintDoc.showKop !== false) && (
-                <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginTop: '1mm', marginBottom: '0.1rem' }}>
-                  {/* Top Centered Emblem Logo */}
+                <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginTop: '1mm', marginBottom: '0.5rem' }}>
+                  {/* Top Centered Logo - plain, no gold ring */}
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '3px' }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      padding: '2px',
-                      background: 'linear-gradient(135deg, #d4af37 0%, #0d382c 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
-                    }}>
-                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        <img src={currentPrintDoc.kopLogo || settings?.logo || "/logo.png"} alt="Logo" style={{ width: '85%', height: 'auto', maxHeight: '38px', objectFit: 'contain' }} />
-                      </div>
-                    </div>
+                    <img
+                      src={currentPrintDoc.kopLogo || settings?.logo || "/logo.png"}
+                      alt="Logo Klinik"
+                      style={{ width: '55px', height: 'auto', maxHeight: '58px', objectFit: 'contain' }}
+                    />
                   </div>
 
                   {/* Yayasan Name */}
-                  <h3 style={{
-                    fontFamily: "'Cinzel', Georgia, serif",
-                    fontSize: '0.86rem',
-                    fontWeight: 800,
-                    letterSpacing: '2px',
-                    margin: '0 0 2px',
-                    color: '#0d382c',
-                    textTransform: 'uppercase'
-                  }}>
-                    {currentPrintDoc.kopYayasan || settings?.yayasanName || 'YAYASAN BAETURRACHMAN GARUT'}
-                  </h3>
-
-                  {/* Address & Contact Details */}
                   <p style={{
                     fontFamily: "Arial, sans-serif",
-                    fontSize: '0.66rem',
-                    margin: 0,
-                    color: '#4b5563',
-                    letterSpacing: '0.2px'
+                    fontSize: '0.78rem',
+                    fontWeight: 400,
+                    margin: '0 0 1px',
+                    color: '#000'
                   }}>
-                    {currentPrintDoc.kopAddress || "Jl. Merdeka No. 217 Tarogong Kidul - Garut, Telp. 0262-234754, HP. 0813-2124-3303"}
+                    {currentPrintDoc.kopYayasan || settings?.yayasanName || 'Yayasan Baeturrachman Garut'}
                   </p>
+
+                  {/* Clinic Name - Bold & Large */}
+                  <h2 style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: '1.1rem',
+                    fontWeight: 900,
+                    letterSpacing: '1px',
+                    margin: '0 0 2px',
+                    color: '#000',
+                    textTransform: 'uppercase'
+                  }}>
+                    {currentPrintDoc.kopClinic || (settings?.clinicName ? settings.clinicName.toUpperCase() : 'KLINIK BAITURRAHMAN')}{settings?.city ? ` ${settings.city.toUpperCase()}` : ' GARUT'}
+                  </h2>
+
+                  {/* Sertifikat Standar Number */}
+                  <p style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: '0.7rem',
+                    fontWeight: 400,
+                    margin: '0 0 1px',
+                    color: '#000'
+                  }}>
+                    {formatSertifikatStandar(settings?.nib)}
+                  </p>
+
+                  {/* Address */}
+                  <p style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: '0.67rem',
+                    margin: '0 0 1px',
+                    color: '#000'
+                  }}>
+                    {currentPrintDoc.kopAddress || formatKopAddress(settings) || 'Jl. Merdeka No. 217 Tarogong Kidul - Garut, Telp. 0262-234754, HP. 0813-2124-3303'}
+                  </p>
+
+                  {/* Email - italic & underline */}
+                  <p style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontSize: '0.67rem',
+                    margin: '0 0 3px',
+                    color: '#000',
+                    fontStyle: 'italic',
+                    textDecoration: 'underline'
+                  }}>
+                    {settings?.email ? `Email: ${settings.email}` : 'Email: klinikbaiturrahman@rocketmail.com'}
+                  </p>
+
+                  {/* Thick Bottom Border */}
+                  <div style={{ borderBottom: '3px solid #000', marginTop: '2px' }} />
                 </div>
               )}
 
