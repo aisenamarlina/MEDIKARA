@@ -174,21 +174,43 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       else if (field === 'stamp') { maxW = 400; maxH = 400; }
       else if (field === 'logo') { maxW = 400; maxH = 400; }
 
-      const compressed = await compressImage(file, maxW, maxH, 0.85);
-      if (!compressed) return;
+      let compressed = null;
+      try {
+        compressed = await compressImage(file, maxW, maxH, 0.85);
+      } catch (compErr) {
+        console.warn('Image compression fallback:', compErr);
+      }
+
+      // Fallback jika kompresi gagal: baca data URL biasa
+      if (!compressed) {
+        compressed = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result);
+          r.onerror = () => res(null);
+          r.readAsDataURL(file);
+        });
+      }
+
+      if (!compressed) {
+        throw new Error("File gambar tidak dapat dibaca");
+      }
 
       handleChange(field, compressed);
       
       // Auto-save langsung ke database & cloud agar tidak hilang saat logout/refresh
       const updatedForm = { ...formData, [field]: compressed };
-      onSave(updatedForm);
+      if (typeof onSave === 'function') {
+        onSave(updatedForm);
+      }
       const fieldLabel = field === 'signature' ? 'Tanda Tangan Pimpinan' : field === 'stamp' ? 'Stempel Klinik' : 'Logo Klinik';
       window.dispatchEvent(new CustomEvent('app-toast', { 
         detail: { message: `${fieldLabel} berhasil diperbarui dan disimpan permanen!`, type: 'success' } 
       }));
     } catch (err) {
       console.error('File upload error:', err);
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Gagal memproses file gambar!", type: 'error' } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: `Gagal memproses file gambar: ${err?.message || ''}`, type: 'error' } }));
+    } finally {
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -711,7 +733,7 @@ const FileUploadRow = ({ title, desc, image, inputRef, onUpload, round }) => (
       <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>{title}</h4>
       <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</p>
     </div>
-    <input type="file" accept="image/png, image/jpeg" ref={inputRef} style={{ display: 'none' }} onChange={onUpload} />
+    <input type="file" accept="image/*" ref={inputRef} style={{ display: 'none' }} onChange={onUpload} />
     <button 
       onClick={() => inputRef.current.click()}
       style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

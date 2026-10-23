@@ -26,7 +26,7 @@ import RelokasiAset from './pages/RelokasiAset';
 import LaporanAset from './pages/LaporanAset';
 import SuratKeluar from './pages/SuratKeluar';
 import PengaturanSistem from './pages/PengaturanSistem';
-import { defaultUsers, defaultDirectorSignature, defaultClinicStamp } from './defaultData';
+import { defaultUsers, defaultDirectorSignature, defaultClinicStamp, defaultSettings } from './defaultData';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import confetti from 'canvas-confetti';
 
