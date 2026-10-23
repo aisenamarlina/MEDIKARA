@@ -562,7 +562,29 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Pastikan seluruh properti default (terutama signature dan stamp) lengkap
+    // Sinkronkan data dari cloud saat App mount
+    initDB().then(() => {
+      setSettings(db.get("settings"));
+      setIncomingLetters(db.get("incoming_letters") || []);
+      setOutgoingLetters(db.get("outgoing_letters") || []);
+      setCertificates(db.get("certificates") || []);
+      setWarehouseItems(db.get("warehouse_items") || []);
+      setAssetsInventaris(db.get("assets_inventaris") || []);
+      setDigitalArchive(db.get("digital_archive") || []);
+    });
+
+    const handleWindowFocus = () => {
+      initDB().then(() => {
+        setSettings(db.get("settings"));
+        setOutgoingLetters(db.get("outgoing_letters") || []);
+      });
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
+
+  useEffect(() => {
+    // Pastikan seluruh properti default (terutama signature dan stamp) lengkap pada state UI
     if (!settings || !settings.clinicName || !settings.signature || !settings.stamp) {
       const fullSettings = {
         ...defaultSettings,
@@ -572,7 +594,6 @@ export default function App() {
         logo: settings?.logo || defaultSettings.logo || "/logo.png"
       };
       setSettings(fullSettings);
-      db.set("settings", fullSettings);
     }
   }, [settings]);
 

@@ -10,11 +10,8 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
   useEffect(() => {
     if (settings) {
       setFormData(prev => ({
-        ...settings,
         ...prev,
-        signature: prev.signature || settings.signature,
-        stamp: prev.stamp || settings.stamp,
-        logo: prev.logo || settings.logo
+        ...settings
       }));
     }
   }, [settings]);

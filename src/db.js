@@ -19,8 +19,21 @@ import {
   defaultAssetTypes,
   defaultAssetUnits,
   defaultDigitalArchive,
-  defaultUsers
+  defaultUsers,
+  defaultDirectorSignature,
+  defaultClinicStamp
 } from './defaultData';
+
+export const isCustomImage = (val) => {
+  if (!val || typeof val !== 'string') return false;
+  if (val.startsWith('data:image/png') || val.startsWith('data:image/jpeg') || val.startsWith('data:image/webp')) {
+    return true;
+  }
+  if (val !== defaultDirectorSignature && val !== defaultClinicStamp && !val.includes('path d="M25 60 C35 30')) {
+    return true;
+  }
+  return false;
+};
 
 const LS_PREFIX = 'kbr_db_';
 
@@ -388,12 +401,12 @@ export const initDB = async () => {
         if (v !== undefined && v !== null) {
           if (k === 'settings') {
             const localSettings = lsGet('settings', defaultSettings);
-            const isLocalCustomSig = localSettings.signature && localSettings.signature !== defaultDirectorSignature;
-            const isServerCustomSig = v.signature && v.signature !== defaultDirectorSignature;
+            const isLocalCustomSig = isCustomImage(localSettings.signature);
+            const isServerCustomSig = isCustomImage(v.signature);
             const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : (v.signature || defaultDirectorSignature));
 
-            const isLocalCustomStamp = localSettings.stamp && localSettings.stamp !== defaultClinicStamp;
-            const isServerCustomStamp = v.stamp && v.stamp !== defaultClinicStamp;
+            const isLocalCustomStamp = isCustomImage(localSettings.stamp);
+            const isServerCustomStamp = isCustomImage(v.stamp);
             const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : (v.stamp || defaultClinicStamp));
 
             const isLocalCustomLogo = localSettings.logo && localSettings.logo !== defaultSettings.logo && localSettings.logo !== '/logo.png';
@@ -409,8 +422,8 @@ export const initDB = async () => {
               logo: finalLogo
             };
             lsSet('settings', mergedSettings, true);
-            // Jika lokal memiliki TTD/Cap kustom yang belum ada di server, dorong ke server
-            if (isLocalCustomSig || isLocalCustomStamp || isLocalCustomLogo) {
+            // Jika lokal memiliki TTD/Cap kustom yang belum ada di server, dorong ke server sekarang juga!
+            if ((isLocalCustomSig && !isServerCustomSig) || (isLocalCustomStamp && !isServerCustomStamp) || (isLocalCustomLogo && !isServerCustomLogo)) {
               pushToServer('settings', mergedSettings);
             }
           } else if (ARRAY_COLLECTIONS.has(k)) {
