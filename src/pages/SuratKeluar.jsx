@@ -1402,11 +1402,11 @@ const SuratKeluar = ({
 
             {/* Form khusus SOP - berdiri sendiri */}
             {letterForm.typeCode === "SOP" && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                 {/* Header SOP */}
-                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(20,83,45,0.06)', borderRadius: '8px', border: '1px solid var(--primary)' }}>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(20,83,45,0.06)', borderRadius: '8px', border: '1px solid var(--primary)', width: '100%', boxSizing: 'border-box' }}>
                   <h5 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>📋 Informasi Header SOP</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Judul SOP</label>
                       <input type="text" className="input-field" placeholder="Contoh: Pemantauan Lingkungan Fisik" value={letterForm.sopData?.judulSop || ''} onChange={e => setLetterForm({ ...letterForm, sopData: { ...letterForm.sopData, judulSop: e.target.value } })} />
@@ -1534,24 +1534,24 @@ const SuratKeluar = ({
                       </div>
                       
                       {/* Items loop for this section */}
-                      <div style={{ paddingLeft: '1.25rem' }}>
+                      <div style={{ paddingLeft: '1rem', width: '100%', boxSizing: 'border-box' }}>
                         {section.items.map((item, iIdx) => (
-                          <div key={iIdx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                            <span style={{ minWidth: '15px', fontWeight: 500, fontSize: '0.85rem', paddingTop: '0.4rem', color: 'var(--text-muted)' }}>{iIdx + 1}.</span>
+                          <div key={iIdx} style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start', marginBottom: '0.4rem', width: '100%', minWidth: 0 }}>
+                            <span style={{ minWidth: '18px', flexShrink: 0, fontWeight: 500, fontSize: '0.85rem', paddingTop: '0.4rem', color: 'var(--text-muted)' }}>{iIdx + 1}.</span>
                             <textarea className="input-field" rows={1} placeholder={`Isi baris ke-${iIdx + 1}...`} value={item} 
                               onChange={e => {
                                 const newSections = [...sectionsArray];
                                 newSections[sIdx].items[iIdx] = e.target.value;
                                 setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, sections: newSections } }));
                               }} 
-                              style={{ flex: 1, resize: 'vertical', minHeight: '36px' }} 
+                              style={{ flex: 1, resize: 'vertical', minHeight: '36px', minWidth: 0, width: '100%', boxSizing: 'border-box' }} 
                             />
                             {section.items.length > 1 && (
                               <button type="button" onClick={() => {
                                 const newSections = [...sectionsArray];
                                 newSections[sIdx].items = newSections[sIdx].items.filter((_, i) => i !== iIdx);
                                 setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, sections: newSections } }));
-                              }} style={{ padding: '0.2rem 0.4rem', backgroundColor: 'transparent', color: '#b91c1c', border: 'none', cursor: 'pointer', fontSize: '0.8rem', marginTop: '4px' }}>✕</button>
+                              }} style={{ flexShrink: 0, padding: '0.2rem 0.4rem', backgroundColor: 'transparent', color: '#b91c1c', border: 'none', cursor: 'pointer', fontSize: '0.8rem', marginTop: '4px' }}>✕</button>
                             )}
                           </div>
                         ))}
@@ -1594,36 +1594,45 @@ const SuratKeluar = ({
                 </div>
 
                 {/* Rekam Historis */}
-                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(20,83,45,0.03)', borderRadius: '8px', border: '1px dashed var(--border-light)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(20,83,45,0.03)', borderRadius: '8px', border: '1px dashed var(--border-light)', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>10. Rekam Historis Perubahan</h5>
                     <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: [...(prev.sopData?.rekamHistoris || []), { yangDiubah: '', isiPerubahan: '', tanggalMulai: '' }] } }))}
                       style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>+ Tambah Baris</button>
                   </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <div style={{ width: '100%', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', minWidth: '400px', borderCollapse: 'collapse', fontSize: '0.78rem', tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '32px' }} />
+                      <col style={{ width: '28%' }} />
+                      <col style={{ width: '36%' }} />
+                      <col style={{ width: '28%' }} />
+                      <col style={{ width: '28px' }} />
+                    </colgroup>
                     <thead><tr style={{ backgroundColor: 'var(--bg-main)' }}>
-                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem', textAlign: 'center', width: '35px', fontWeight: 600 }}>No</th>
-                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem', textAlign: 'left', fontWeight: 600 }}>Yang Diubah</th>
-                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem', textAlign: 'left', fontWeight: 600 }}>Isi Perubahan</th>
-                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem', textAlign: 'center', width: '130px', fontWeight: 600 }}>Tanggal Mulai</th>
-                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem', width: '32px' }}></th>
+                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem 0.2rem', textAlign: 'center', fontWeight: 600 }}>No</th>
+                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem 0.4rem', textAlign: 'left', fontWeight: 600 }}>Yang Diubah</th>
+                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem 0.4rem', textAlign: 'left', fontWeight: 600 }}>Isi Perubahan</th>
+                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem 0.2rem', textAlign: 'center', fontWeight: 600 }}>Tgl Mulai</th>
+                      <th style={{ border: '1px solid var(--border)', padding: '0.3rem 0.2rem' }}></th>
                     </tr></thead>
                     <tbody>
                       {(letterForm.sopData?.rekamHistoris || [{ yangDiubah: '', isiPerubahan: '', tanggalMulai: '' }]).map((rh, idx) => (
                         <tr key={idx}>
                           <td style={{ border: '1px solid var(--border)', padding: '0.2rem', textAlign: 'center' }}>{idx + 1}</td>
-                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="text" value={rh.yangDiubah || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], yangDiubah: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.4rem', fontSize: '0.78rem', border: 'none', background: 'transparent', width: '100%' }} /></td>
-                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="text" value={rh.isiPerubahan || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], isiPerubahan: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.4rem', fontSize: '0.78rem', border: 'none', background: 'transparent', width: '100%' }} /></td>
-                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="date" value={rh.tanggalMulai || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], tanggalMulai: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.4rem', fontSize: '0.78rem', border: 'none', background: 'transparent', width: '100%' }} /></td>
+                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="text" value={rh.yangDiubah || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], yangDiubah: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', width: '100%', boxSizing: 'border-box' }} /></td>
+                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="text" value={rh.isiPerubahan || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], isiPerubahan: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', width: '100%', boxSizing: 'border-box' }} /></td>
+                          <td style={{ border: '1px solid var(--border)', padding: '0.2rem' }}><input type="date" value={rh.tanggalMulai || ''} onChange={e => { const u = [...(letterForm.sopData?.rekamHistoris || [])]; u[idx] = { ...u[idx], tanggalMulai: e.target.value }; setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.2rem 0.2rem', fontSize: '0.72rem', border: 'none', background: 'transparent', width: '100%', boxSizing: 'border-box' }} /></td>
                           <td style={{ border: '1px solid var(--border)', padding: '0.2rem', textAlign: 'center' }}>
                             {(letterForm.sopData?.rekamHistoris || []).length > 1 && (
-                              <button type="button" onClick={() => { const u = (letterForm.sopData?.rekamHistoris || []).filter((_, i) => i !== idx); setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.1rem 0.35rem', backgroundColor: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}>✕</button>
+                              <button type="button" onClick={() => { const u = (letterForm.sopData?.rekamHistoris || []).filter((_, i) => i !== idx); setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, rekamHistoris: u } })); }} style={{ padding: '0.1rem 0.3rem', backgroundColor: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.68rem' }}>✕</button>
                             )}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}
