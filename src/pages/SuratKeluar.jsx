@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, Download, Printer, Edit3, Trash2, Send, Search, FileText, Calendar } from 'lucide-react';
 import { getTemplateData } from '../App';
+import { compressImage } from '../utils/imageCompressor';
 
 
 const SuratKeluar = ({
@@ -1362,12 +1363,17 @@ const SuratKeluar = ({
                             <input 
                               type="file" 
                               accept="image/*" 
-                              onChange={e => {
+                              onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => setLetterForm(prev => ({ ...prev, signature: reader.result, sopData: { ...prev.sopData, signature: reader.result } }));
-                                  reader.readAsDataURL(file);
+                                  try {
+                                    const compressed = await compressImage(file, 600, 300, 0.85);
+                                    if (compressed) {
+                                      setLetterForm(prev => ({ ...prev, signature: compressed, sopData: { ...prev.sopData, signature: compressed } }));
+                                    }
+                                  } catch (err) {
+                                    console.error('Compress signature error:', err);
+                                  }
                                 }
                               }} 
                               style={{ fontSize: '0.72rem' }} 
@@ -1463,12 +1469,17 @@ const SuratKeluar = ({
 
                   <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed #cbd5e1' }}>
                     <label className="form-label">🖼️ Bagan Alir (Upload Gambar)</label>
-                    <input type="file" accept="image/*" className="input-field" onChange={e => {
-                      const file = e.target.files[0];
+                    <input type="file" accept="image/*" className="input-field" onChange={async (e) => {
+                      const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: reader.result } }));
-                        reader.readAsDataURL(file);
+                        try {
+                          const compressed = await compressImage(file, 800, 800, 0.8);
+                          if (compressed) {
+                            setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: compressed } }));
+                          }
+                        } catch (err) {
+                          console.error('Compress flowchart error:', err);
+                        }
                       }
                     }} style={{ padding: '0.4rem', cursor: 'pointer' }} />
                     {letterForm.sopData?.baganAlirImage && (

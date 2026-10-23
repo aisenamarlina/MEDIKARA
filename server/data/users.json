@@ -1,12 +1,22 @@
 [
   {
     "id": "usr-001",
-    "username": "admin",
-    "password": "admin",
     "name": "Admin",
     "role": "Administrator",
-    "department": "Unit IT",
     "email": "kbaiturrahmangarut@gmail.com",
+    "password": "admin",
+    "username": "admin",
+    "department": "Unit IT",
     "avatarColor": "#0d9488"
+  },
+  {
+    "id": "usr-002",
+    "username": "direktur",
+    "password": "direktur",
+    "name": "Dr. H. Ahmad Fauzi, M.Kes",
+    "role": "Direktur Utama",
+    "department": "Pimpinan & Direksi",
+    "email": "direktur@klinikbaiturrahman.com",
+    "avatarColor": "#1e4a35"
   }
 ]

@@ -367,6 +367,14 @@ export const initDB = async () => {
             if (!v.signature || !v.stamp) {
               pushToServer('settings', mergedSettings);
             }
+          } else if (ARRAY_COLLECTIONS.has(k)) {
+            const localData = lsGet(k, []);
+            const merged = mergeCollections(k, localData, v);
+            lsSet(k, merged, true);
+            // Jika data lokal memiliki entri baru yang belum ada di server, sinkronkan ke server
+            if (Array.isArray(localData) && Array.isArray(v) && localData.length > v.length) {
+              pushToServer(k, merged);
+            }
           } else {
             const normalized = normalizeCollection(k, v);
             lsSet(k, normalized, true);
