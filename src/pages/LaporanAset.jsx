@@ -34,6 +34,7 @@ const LaporanAset = ({ settings = {}, assets = [], locations = [], types = [], i
   const [signeeRightName, setSigneeRightName] = useState("Andriana");
   const [signeeRightNik, setSigneeRightNik] = useState("");
   const [useDigitalSignature, setUseDigitalSignature] = useState(false);
+  const [useDigitalStamp, setUseDigitalStamp] = useState(false);
   // Filter assets
   const baseBarangAssets = (assets || []).filter(a => !a.category || a.category === "Barang/Benda");
   const barangAssets = baseBarangAssets.filter(a => {
@@ -355,10 +356,14 @@ const LaporanAset = ({ settings = {}, assets = [], locations = [], types = [], i
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
               <input type="checkbox" checked={useDigitalSignature} onChange={e => setUseDigitalSignature(e.target.checked)} style={{ cursor: 'pointer' }} />
-              Gunakan Stempel & TTD Digital
+              ✍️ Pakai TTD Digital
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
+              <input type="checkbox" checked={useDigitalStamp} onChange={e => setUseDigitalStamp(e.target.checked)} style={{ cursor: 'pointer' }} />
+              💮 Pakai Stempel Resmi
             </label>
           </div>
         </div>
@@ -738,12 +743,14 @@ const LaporanAset = ({ settings = {}, assets = [], locations = [], types = [], i
             <p style={{ margin: 0 }}>{reportDate || "\u00A0"}</p>
             <p style={{ fontWeight: 700, margin: '2px 0 0' }}>{signeeRightTitle || "\u00A0"},</p>
             
-            {useDigitalSignature && settings?.signature ? (
+            {((useDigitalSignature && settings?.signature) || (useDigitalStamp && settings?.stamp)) ? (
               <div style={{ height: '120px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {settings?.stamp && (
+                {useDigitalStamp && settings?.stamp && (
                   <img src={settings.stamp} alt="Stamp" style={{ position: 'absolute', width: '80px', height: 'auto', opacity: 0.8, left: '20%' }} />
                 )}
-                <img src={settings.signature} alt="Signature" style={{ position: 'relative', width: '100px', height: 'auto', zIndex: 2 }} />
+                {useDigitalSignature && settings?.signature && (
+                  <img src={settings.signature} alt="Signature" style={{ position: 'relative', width: '100px', height: 'auto', zIndex: 2 }} />
+                )}
               </div>
             ) : (
               <div style={{ height: '70px' }} />

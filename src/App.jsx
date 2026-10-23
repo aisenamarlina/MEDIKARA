@@ -1324,6 +1324,8 @@ export default function App() {
     signeeCount: 1,
     kopType: "direktur",
     date: new Date().toISOString().split('T')[0],
+    useDigitalSignature: true,
+    useDigitalStamp: true,
     skData: { tentang: "", menimbang: [""], mengingat: [""], menetapkan: "", keputusan: [{ key: "KESATU", value: "" }] },
     pedomanData: { lampiranNomor: "", lampiranTentang: "", babs: [{ title: "PENDAHULUAN", points: ["Latar Belakang\n...", "Maksud dan Tujuan\n...", "Sasaran\n...", "Asas\n...", "Ruang Lingkup\n...", "Pengertian Umum\n..."] }] },
     sopData: { judulSop: "", noDokumen: "", noRevisi: "", tanggalTerbit: "", halaman: "", pengertian: "", tujuan: "", kebijakan: "", referensi: "", langkahLangkah: [""], baganAlir: [""], halDiperhatikan: "", unitTerkait: "", dokumenTerkait: "", rekamHistoris: [{ no: "1", yangDiubah: "", isiPerubahan: "", tanggalMulai: "" }] },
@@ -1389,7 +1391,8 @@ export default function App() {
           signeeCount: letterData.signeeCount || ((letterData.leftSignatoryName || letterData.leftSignatoryTitle) ? 2 : 1),
           kopType: letterData.kopType || "direktur",
           attachments: letterData.attachments,
-          useDigitalSignature: letterData.useDigitalSignature,
+          useDigitalSignature: letterData.useDigitalSignature !== false,
+          useDigitalStamp: letterData.useDigitalStamp !== false,
           status: "Selesai"
         };
             setOutgoingLetters(prev => {
@@ -1462,7 +1465,8 @@ export default function App() {
     leftSignatoryName: "", 
     leftSignatoryTitle: "", 
     customBody: "", 
-    useDigitalSignature: true
+    useDigitalSignature: true,
+    useDigitalStamp: true
   });
   const [prevAutoBody, setPrevAutoBody] = useState("");
 
@@ -1513,7 +1517,8 @@ export default function App() {
             title: certForm.title || "Direktur Utama",
             leftSignatoryName: certForm.leftSignatoryName || "",
             leftSignatoryTitle: certForm.leftSignatoryTitle || "",
-            useDigitalSignature: Boolean(certForm.useDigitalSignature)
+            useDigitalSignature: Boolean(certForm.useDigitalSignature),
+            useDigitalStamp: Boolean(certForm.useDigitalStamp !== false)
           };
           setCertificates(prev => {
             const updated = [newCert, ...prev];
@@ -2576,20 +2581,26 @@ export default function App() {
       const sigSrc = isLeft ? (currentPrintDoc?.leftSignature || null) : (currentPrintDoc?.signature || currentPrintDoc?.sopData?.signature || settings?.signature || defaultDirectorSignature);
       const stampSrc = currentPrintDoc?.stamp || currentPrintDoc?.sopData?.stamp || settings?.stamp || defaultClinicStamp;
       const showSig = (currentPrintDoc?.useDigitalSignature !== false) && (isLeft ? Boolean(currentPrintDoc?.leftSignature) : Boolean(sigSrc));
+      const showStamp = !isLeft && (currentPrintDoc?.useDigitalStamp !== false) && Boolean(stampSrc);
+
+      if (!showSig && !showStamp) {
+        return (
+          <div style={{ minHeight: '55px', maxHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', width: '100%' }}>
+            <span style={{ fontSize: '0.8rem', color: '#999', fontStyle: 'italic' }}>&nbsp;</span>
+          </div>
+        );
+      }
+
       return (
         <div style={{ minHeight: '55px', maxHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0', width: '100%' }}>
-          {showSig ? (
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60px', width: '100%', maxWidth: '160px', overflow: 'hidden' }}>
-              {stampSrc && !isLeft && (
-                <img src={stampSrc} alt="stempel" style={{ position: 'absolute', maxHeight: '56px', maxWidth: '56px', width: 'auto', height: 'auto', left: '0', opacity: 0.85, objectFit: 'contain', zIndex: 1 }} />
-              )}
-              {sigSrc && (
-                <img src={sigSrc} alt="ttd" style={{ position: 'relative', maxWidth: '100%', maxHeight: '55px', width: 'auto', height: 'auto', objectFit: 'contain', zIndex: 2 }} />
-              )}
-            </div>
-          ) : (
-            <span style={{ fontSize: '0.8rem', color: '#999', fontStyle: 'italic' }}>(tanda tangan dan cap)</span>
-          )}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60px', width: '100%', maxWidth: '160px', overflow: 'hidden' }}>
+            {showStamp && (
+              <img src={stampSrc} alt="stempel" style={{ position: 'absolute', maxHeight: '56px', maxWidth: '56px', width: 'auto', height: 'auto', left: '0', opacity: 0.85, objectFit: 'contain', zIndex: 1 }} />
+            )}
+            {showSig && (
+              <img src={sigSrc} alt="ttd" style={{ position: 'relative', maxWidth: '100%', maxHeight: '55px', width: 'auto', height: 'auto', objectFit: 'contain', zIndex: 2 }} />
+            )}
+          </div>
         </div>
       );
     };
@@ -2970,35 +2981,44 @@ export default function App() {
                           </div>
                         </td>
                         <td style={{ border: '0.5px solid #000000', textAlign: 'center', padding: '0.2rem 0.4rem', verticalAlign: 'middle', height: '55px', overflow: 'hidden' }}>
-                          {(currentPrintDoc?.useDigitalSignature !== false) ? (
-                            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50px', width: '100%', overflow: 'hidden' }}>
-                              {(currentPrintDoc?.sopData?.stamp || settings?.stamp || defaultClinicStamp) && (
-                                <img 
-                                  src={currentPrintDoc?.sopData?.stamp || settings?.stamp || defaultClinicStamp} 
-                                  alt="stempel" 
-                                  style={{ position: 'absolute', maxHeight: '48px', maxWidth: '48px', width: 'auto', height: 'auto', left: '5%', opacity: 0.85, objectFit: 'contain', zIndex: 1 }} 
-                                />
-                              )}
-                              {(currentPrintDoc?.sopData?.signature || currentPrintDoc?.signature || settings?.signature || defaultDirectorSignature) && (
-                                <img
-                                  src={currentPrintDoc?.sopData?.signature || currentPrintDoc?.signature || settings?.signature || defaultDirectorSignature}
-                                  alt="TTD Digital"
-                                  style={{
-                                    maxWidth: '100%',
-                                    maxHeight: '48px',
-                                    width: 'auto',
-                                    height: 'auto',
-                                    objectFit: 'contain',
-                                    zIndex: 2,
-                                    display: 'block',
-                                    margin: '0 auto'
-                                  }}
-                                />
-                              )}
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '8pt', color: '#999', fontStyle: 'italic' }}>&nbsp;</span>
-                          )}
+                          {(() => {
+                            const showSopSig = (currentPrintDoc?.useDigitalSignature !== false);
+                            const showSopStamp = (currentPrintDoc?.useDigitalStamp !== false);
+                            const sopStampSrc = currentPrintDoc?.sopData?.stamp || currentPrintDoc?.stamp || settings?.stamp || defaultClinicStamp;
+                            const sopSigSrc = currentPrintDoc?.sopData?.signature || currentPrintDoc?.signature || settings?.signature || defaultDirectorSignature;
+
+                            if (!showSopSig && !showSopStamp) {
+                              return <span style={{ fontSize: '8pt', color: '#999', fontStyle: 'italic' }}>&nbsp;</span>;
+                            }
+
+                            return (
+                              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50px', width: '100%', overflow: 'hidden' }}>
+                                {showSopStamp && sopStampSrc && (
+                                  <img 
+                                    src={sopStampSrc} 
+                                    alt="stempel" 
+                                    style={{ position: 'absolute', maxHeight: '48px', maxWidth: '48px', width: 'auto', height: 'auto', left: '5%', opacity: 0.85, objectFit: 'contain', zIndex: 1 }} 
+                                  />
+                                )}
+                                {showSopSig && sopSigSrc && (
+                                  <img
+                                    src={sopSigSrc}
+                                    alt="TTD Digital"
+                                    style={{
+                                      maxWidth: '100%',
+                                      maxHeight: '48px',
+                                      width: 'auto',
+                                      height: 'auto',
+                                      objectFit: 'contain',
+                                      zIndex: 2,
+                                      display: 'block',
+                                      margin: '0 auto'
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
 
@@ -5452,13 +5472,13 @@ export default function App() {
                     <div style={{ textAlign: 'center', width: '220px' }}>
                       <p style={{ visibility: 'hidden', margin: '0 0 1rem 0' }}>Spacer</p>
                       <p style={{ fontWeight: 'bold', margin: 0 }}>PIHAK KE II,</p>
-                      {currentPrintDoc?.useDigitalSignature ? renderSafeDigitalSignature(true) : <div style={{ height: '70px' }}></div>}
+                      {renderSafeDigitalSignature(true)}
                       <p style={{ fontWeight: 'bold', margin: 0, textTransform: 'uppercase' }}>{currentPrintDoc.namaPihak2 || "NAMA"}</p>
                     </div>
                     <div style={{ textAlign: 'center', width: '220px' }}>
                       <p style={{ visibility: 'hidden', margin: '0 0 1rem 0' }}>Spacer</p>
                       <p style={{ fontWeight: 'bold', margin: 0 }}>PIHAK KE I,</p>
-                      {currentPrintDoc?.useDigitalSignature ? renderSafeDigitalSignature() : <div style={{ height: '70px' }}></div>}
+                      {renderSafeDigitalSignature()}
                       <p style={{ fontWeight: 'bold', margin: 0, textTransform: 'uppercase' }}>{currentPrintDoc.namaPihak1 || "NAMA"}</p>
                     </div>
                   </div>
@@ -6158,10 +6178,10 @@ export default function App() {
                     </p>
                     
                     <div style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                      {currentPrintDoc?.useDigitalSignature && settings?.signature ? (
+                      {((currentPrintDoc?.useDigitalSignature !== false && settings?.signature) || (currentPrintDoc?.useDigitalStamp !== false && settings?.stamp)) ? (
                         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '40px', width: '100%' }}>
-                          {settings?.stamp && <img src={settings.stamp} alt="stempel" style={{ position: 'absolute', width: '50px', height: 'auto', left: '10%', opacity: 0.8 }} />}
-                          <img src={settings.signature} alt="ttd" style={{ position: 'relative', width: '75px', height: 'auto', zIndex: 2 }} />
+                          {(currentPrintDoc?.useDigitalStamp !== false && settings?.stamp) && <img src={settings.stamp} alt="stempel" style={{ position: 'absolute', width: '50px', height: 'auto', left: '10%', opacity: 0.8 }} />}
+                          {(currentPrintDoc?.useDigitalSignature !== false && settings?.signature) && <img src={settings.signature} alt="ttd" style={{ position: 'relative', width: '75px', height: 'auto', zIndex: 2 }} />}
                         </div>
                       ) : null}
                     </div>
@@ -8091,17 +8111,30 @@ export default function App() {
                       </div>
                     </div>
                     
-                    <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <input 
-                        type="checkbox" 
-                        id="certUseSig" 
-                        checked={certForm.useDigitalSignature} 
-                        onChange={e => setCertForm({ ...certForm, useDigitalSignature: e.target.checked })} 
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
-                      />
-                      <label htmlFor="certUseSig" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', cursor: 'pointer' }}>
-                        Sertakan Tanda Tangan Digital & Stempel Resmi Klinik (Jika tersedia di Profil)
-                      </label>
+                    <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-light)', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-dark)' }}>Opsi Pengesahan Sertifikat:</span>
+                      <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
+                          <input 
+                            type="checkbox" 
+                            id="certUseSig" 
+                            checked={certForm.useDigitalSignature !== false} 
+                            onChange={e => setCertForm({ ...certForm, useDigitalSignature: e.target.checked })} 
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
+                          />
+                          ✍️ Pakai TTD Digital
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
+                          <input 
+                            type="checkbox" 
+                            id="certUseStamp" 
+                            checked={certForm.useDigitalStamp !== false} 
+                            onChange={e => setCertForm({ ...certForm, useDigitalStamp: e.target.checked })} 
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
+                          />
+                          💮 Pakai Stempel Resmi
+                        </label>
+                      </div>
                     </div>
                   </div>
 
@@ -9377,15 +9410,27 @@ export default function App() {
                       </div>
                     </div>
                     
-                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <input 
-                        type="checkbox" 
-                        id="editUseDigitalSignature"
-                        checked={letterModal.data.useDigitalSignature || false} 
-                        onChange={e => setLetterModal({...letterModal, data: {...letterModal.data, useDigitalSignature: e.target.checked}})} 
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <label htmlFor="editUseDigitalSignature" style={{ fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Gunakan Tanda Tangan & Stempel Digital</label>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          id="editUseDigitalSignature"
+                          checked={letterModal.data.useDigitalSignature !== false} 
+                          onChange={e => setLetterModal({...letterModal, data: {...letterModal.data, useDigitalSignature: e.target.checked}})} 
+                          style={{ cursor: 'pointer' }}
+                        />
+                        ✍️ Pakai TTD Digital
+                      </label>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          id="editUseDigitalStamp"
+                          checked={letterModal.data.useDigitalStamp !== false} 
+                          onChange={e => setLetterModal({...letterModal, data: {...letterModal.data, useDigitalStamp: e.target.checked}})} 
+                          style={{ cursor: 'pointer' }}
+                        />
+                        💮 Pakai Stempel Resmi
+                      </label>
                     </div>
 
                   </div>
@@ -9483,16 +9528,26 @@ export default function App() {
                 </div>
               </div>
               
-              <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input 
-                  type="checkbox" 
-                  id="certModalUseSig" 
-                  checked={Boolean(certModal.data.useDigitalSignature)} 
-                  onChange={e => setCertModal({...certModal, data: {...certModal.data, useDigitalSignature: e.target.checked}})} 
-                  style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
-                />
-                <label htmlFor="certModalUseSig" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', cursor: 'pointer' }}>
-                  Gunakan TTD Digital & Stempel Resmi Klinik
+              <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    id="certModalUseSig" 
+                    checked={certModal.data.useDigitalSignature !== false} 
+                    onChange={e => setCertModal({...certModal, data: {...certModal.data, useDigitalSignature: e.target.checked}})} 
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
+                  />
+                  ✍️ Pakai TTD Digital
+                </label>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    id="certModalUseStamp" 
+                    checked={certModal.data.useDigitalStamp !== false} 
+                    onChange={e => setCertModal({...certModal, data: {...certModal.data, useDigitalStamp: e.target.checked}})} 
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
+                  />
+                  💮 Pakai Stempel Resmi
                 </label>
               </div>
               

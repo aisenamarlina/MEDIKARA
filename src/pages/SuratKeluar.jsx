@@ -465,11 +465,18 @@ const SuratKeluar = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div><label className="form-label" style={{ fontSize: '0.75rem' }}>Jabatan Penandatangan Kanan</label><input type="text" placeholder="Default: Direktur Utama" value={letterForm.title || ""} onChange={e => setLetterForm({ ...letterForm, title: e.target.value })} className="input-field" style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem' }} /></div>
                       <div><label className="form-label" style={{ fontSize: '0.75rem' }}>Nama Direktur / Penandatangan</label><input type="text" placeholder="Kosongkan jika diisi otomatis / manual" value={letterForm.signatory || ""} onChange={e => setLetterForm({ ...letterForm, signatory: e.target.value })} className="input-field" style={{ padding: '0.45rem 0.6rem', fontSize: '0.85rem' }} /></div>
-                      <div style={{ marginTop: '0.25rem', padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
-                          <input type="checkbox" checked={letterForm.useDigitalSignature || false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer' }} />
-                          Gunakan Tanda Tangan & Stempel Digital
-                        </label>
+                      <div style={{ marginTop: '0.25rem', padding: '0.6rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dark)' }}>Opsi Pengesahan Digital:</span>
+                        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
+                            <input type="checkbox" checked={letterForm.useDigitalSignature !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                            ✍️ Pakai Tanda Tangan Digital
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
+                            <input type="checkbox" checked={letterForm.useDigitalStamp !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalStamp: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                            💮 Pakai Stempel Resmi
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1351,15 +1358,22 @@ const SuratKeluar = ({
                     <div><label className="form-label">Halaman</label><input type="text" className="input-field" placeholder="Contoh: 1 dari 2" value={letterForm.sopData?.halaman || ''} onChange={e => setLetterForm({ ...letterForm, sopData: { ...letterForm.sopData, halaman: e.target.value } })} /></div>
                     <div><label className="form-label">Nama Penandatangan</label><input type="text" className="input-field" placeholder="Nama lengkap & gelar" value={letterForm.sopData?.namaDirektur || ''} onChange={e => setLetterForm({ ...letterForm, sopData: { ...letterForm.sopData, namaDirektur: e.target.value } })} /></div>
                     <div><label className="form-label">NIK Penandatangan</label><input type="text" className="input-field" placeholder="NIK" value={letterForm.sopData?.nikDirektur || ''} onChange={e => setLetterForm({ ...letterForm, sopData: { ...letterForm.sopData, nikDirektur: e.target.value } })} /></div>
-                    <div style={{ gridColumn: '1 / -1', marginTop: '0.25rem', padding: '0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
-                        <input type="checkbox" checked={letterForm.useDigitalSignature !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer' }} />
-                        Gunakan Tanda Tangan & Stempel Digital pada Kotak SOP
-                      </label>
+                    <div style={{ gridColumn: '1 / -1', marginTop: '0.25rem', padding: '0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-dark)' }}>Opsi Pengesahan Kotak SOP:</span>
+                      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
+                          <input type="checkbox" checked={letterForm.useDigitalSignature !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          ✍️ Pakai TTD Digital pada Kotak SOP
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
+                          <input type="checkbox" checked={letterForm.useDigitalStamp !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalStamp: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
+                          💮 Pakai Stempel Resmi pada Kotak SOP
+                        </label>
+                      </div>
                       {letterForm.useDigitalSignature !== false && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px dashed var(--border-light)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Upload TTD Custom:</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Upload TTD Custom Khusus SOP:</span>
                             <input 
                               type="file" 
                               accept="image/*" 
@@ -1381,6 +1395,34 @@ const SuratKeluar = ({
                           </div>
                           {(letterForm.signature || letterForm.sopData?.signature) && (
                             <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>✓ TTD Terpasang</span>
+                          )}
+                        </div>
+                      )}
+                      {letterForm.useDigitalStamp !== false && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', paddingTop: '0.4rem', borderTop: '1px dashed var(--border-light)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Upload Stempel Custom Khusus SOP:</span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const compressed = await compressImage(file, 400, 400, 0.85);
+                                    if (compressed) {
+                                      setLetterForm(prev => ({ ...prev, stamp: compressed, sopData: { ...prev.sopData, stamp: compressed } }));
+                                    }
+                                  } catch (err) {
+                                    console.error('Compress stamp error:', err);
+                                  }
+                                }
+                              }} 
+                              style={{ fontSize: '0.72rem' }} 
+                            />
+                          </div>
+                          {(letterForm.stamp || letterForm.sopData?.stamp) && (
+                            <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600 }}>✓ Stempel Terpasang</span>
                           )}
                         </div>
                       )}
