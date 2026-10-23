@@ -7169,60 +7169,11 @@ export default function App() {
             </div>
           )}
 
-          {/* Gudang Umum */}
-          {!sidebarCollapsed ? (
-            <div className="sidebar-header" onClick={() => toggleSystem("gudang")}>
-              <span>Gudang Umum</span>
-              {openSystems.gudang ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-          ) : <div style={{ height: '8px' }} />}
-          {(openSystems.gudang || sidebarCollapsed) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: sidebarCollapsed ? '0' : '0.5rem' }}>
-              <button onClick={() => { setActiveMenu("warehouse"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "warehouse" ? "active" : ""}`} title={sidebarCollapsed ? "Inventaris Barang" : ""}>
-                <Warehouse size={18} />
-                {!sidebarCollapsed && <span>Inventaris Barang</span>}
-              </button>
-              <button onClick={() => { setActiveMenu("requests"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "requests" ? "active" : ""}`} title={sidebarCollapsed ? "Permintaan Keluar" : ""}>
-                <ClipboardList size={18} />
-                {!sidebarCollapsed && <span>Permintaan Keluar</span>}
-              </button>
-            </div>
-          )}
-
-          {/* Aset Tetap (Fixed Asset) */}
-          {!sidebarCollapsed ? (
-            <div className="sidebar-header" onClick={() => toggleSystem("fixed_asset")}>
-              <span>Aset Tetap (Fixed Asset)</span>
-              {openSystems.fixed_asset ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </div>
-          ) : <div style={{ height: '8px' }} />}
-          {(openSystems.fixed_asset || sidebarCollapsed) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: sidebarCollapsed ? '0' : '0.5rem' }}>
-              <button onClick={() => { setActiveMenu("asset_master"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "asset_master" ? "active" : ""}`} title={sidebarCollapsed ? "Master Data Aset" : ""}>
-                <Settings size={18} />
-                {!sidebarCollapsed && <span>Master Data Aset</span>}
-              </button>
-              <button onClick={() => { setActiveMenu("assets_inventaris"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "assets_inventaris" ? "active" : ""}`} title={sidebarCollapsed ? "Data Aset & Inventaris" : ""}>
-                <Database size={18} />
-                {!sidebarCollapsed && <span>Data Aset & Inventaris</span>}
-              </button>
-              <button onClick={() => { setActiveMenu("asset_relocation"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "asset_relocation" ? "active" : ""}`} title={sidebarCollapsed ? "Relokasi Aset" : ""}>
-                <RefreshCw size={18} />
-                {!sidebarCollapsed && <span>Relokasi Aset</span>}
-              </button>
-              <button onClick={() => { setAssetReportTab("all_assets"); setActiveMenu("report_assets"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "report_assets" ? "active" : ""}`} title={sidebarCollapsed ? "Laporan Rekap Aset" : ""}>
-                <FileText size={18} />
-                {!sidebarCollapsed && <span>Laporan Rekap Aset</span>}
-              </button>
-              
-            </div>
-          )}
-
-          {/* Footer Settings */}
+          {/* ADMINISTRASI (Gudang Umum & Aset Tetap telah dipindahkan ke Pengaturan Akses Khusus) */}
           <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(0, 0, 0, 0.05)', flexShrink: 0 }}>
             {!sidebarCollapsed && (
               <div className="sidebar-header" style={{ cursor: 'default' }}>
-                <span>Pengaturan</span>
+                <span>ADMINISTRASI</span>
               </div>
             )}
             <button onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "reports" ? "active" : ""}`} title={sidebarCollapsed ? "Laporan Bulanan" : ""}>
@@ -8637,6 +8588,22 @@ export default function App() {
             </div>
           )}
 
+          {/* Return Banner for Special Access pages */}
+          {["warehouse", "requests", "assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.85rem', marginBottom: '0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
+                <Shield size={14} /> Akses Khusus: {["warehouse", "requests"].includes(activeMenu) ? 'Gudang Umum' : 'Aset Tetap'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveMenu('settings')}
+                style={{ background: '#fff', border: '1px solid #86efac', color: '#166534', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                ← Pengaturan Akses Khusus
+              </button>
+            </div>
+          )}
+
           {/* 8. Warehouse Stock management */}
           {activeMenu === "warehouse" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -9565,7 +9532,14 @@ export default function App() {
           {activeMenu === "settings" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
                
-            <PengaturanSistem settings={settings} currentUser={currentUser} onSave={handleSaveSettings} openConfirm={openConfirm} />
+            <PengaturanSistem 
+              settings={settings} 
+              currentUser={currentUser} 
+              onSave={handleSaveSettings} 
+              openConfirm={openConfirm} 
+              setActiveMenu={setActiveMenu}
+              setAssetReportTab={setAssetReportTab}
+            />
             </div>
           )}
 

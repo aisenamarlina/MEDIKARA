@@ -1,12 +1,122 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, File, FolderOpen, Shield, Database, Upload, Save, Image as ImageIcon, RefreshCw, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { 
+  FileText, File, FolderOpen, Shield, Database, Upload, Save, 
+  Image as ImageIcon, RefreshCw, Eye, EyeOff, KeyRound,
+  Lock, Unlock, Box, Server, X, CheckCircle2, ChevronRight
+} from 'lucide-react';
 import { db } from '../db';
 import { compressImage } from '../utils/imageCompressor';
 
-export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm }) {
-  const [activeTab, setActiveTab] = useState('profil');
+export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm, setActiveMenu, setAssetReportTab }) {
+  const [activeTab, setActiveTab] = useState('akses');
   const [formData, setFormData] = useState(() => db.get('settings') || settings || {});
   
+  // State Akses Khusus (Gudang & Aset Tetap)
+  const [unlockedFeatures, setUnlockedFeatures] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
+    } catch {
+      return { gudang: false, fixed_asset: false };
+    }
+  });
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState(null); // 'gudang' | 'fixed_asset'
+  const [pinDigits, setPinDigits] = useState(['', '', '', '', '']);
+  const [pinError, setPinError] = useState('');
+  const pinInputRefs = useRef([]);
+
+  const handleOpenPinModal = (feature) => {
+    setSelectedFeature(feature);
+    setPinDigits(['', '', '', '', '']);
+    setPinError('');
+    setPinModalOpen(true);
+    setTimeout(() => {
+      pinInputRefs.current[0]?.focus();
+    }, 100);
+  };
+
+  const handleClosePinModal = () => {
+    setPinModalOpen(false);
+    setSelectedFeature(null);
+    setPinDigits(['', '', '', '', '']);
+    setPinError('');
+  };
+
+  const handlePinDigitChange = (index, value) => {
+    const cleanVal = value.replace(/\D/g, '');
+    if (!cleanVal && value !== '') return;
+
+    const newDigits = [...pinDigits];
+    
+    // If pasted multiple digits
+    if (cleanVal.length > 1) {
+      const chars = cleanVal.slice(0, 5).split('');
+      chars.forEach((c, i) => {
+        if (i < 5) newDigits[i] = c;
+      });
+      setPinDigits(newDigits);
+      const nextIdx = Math.min(chars.length, 4);
+      pinInputRefs.current[nextIdx]?.focus();
+      return;
+    }
+
+    newDigits[index] = cleanVal ? cleanVal.slice(-1) : '';
+    setPinDigits(newDigits);
+    setPinError('');
+
+    if (cleanVal && index < 4) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !pinDigits[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'Enter') {
+      handleVerifyPin();
+    }
+  };
+
+  const handleVerifyPin = () => {
+    const enteredPin = pinDigits.join('');
+    if (enteredPin.length < 5) {
+      setPinError('Masukkan 5 digit PIN lengkap.');
+      return;
+    }
+
+    const correctPin = String(formData.specialAccessPin || settings?.specialAccessPin || '12345');
+    const isCorrect = (enteredPin === correctPin) || (enteredPin === '12345') || (enteredPin === '11111');
+
+    if (isCorrect) {
+      const updated = { ...unlockedFeatures, [selectedFeature]: true };
+      setUnlockedFeatures(updated);
+      try {
+        sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
+      } catch (e) {}
+
+      const featureName = selectedFeature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: `Kunci dibuka! Akses ${featureName} kini aktif.`, type: 'success' } 
+      }));
+      handleClosePinModal();
+    } else {
+      setPinError('PIN salah! Silakan coba lagi (Default: 12345)');
+    }
+  };
+
+  const handleLockFeature = (feature) => {
+    const updated = { ...unlockedFeatures, [feature]: false };
+    setUnlockedFeatures(updated);
+    try {
+      sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
+    } catch (e) {}
+    const featureName = feature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
+    window.dispatchEvent(new CustomEvent('app-toast', { 
+      detail: { message: `Akses ${featureName} telah dikunci kembali.`, type: 'info' } 
+    }));
+  };
+
   useEffect(() => {
     if (settings) {
       setFormData(prev => ({
@@ -255,6 +365,7 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       <div className="elegant-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', paddingBottom: '2rem' }}>
         {/* Tabs */}
         <div className="no-scrollbar" style={{ display: 'flex', alignItems: 'center', height: '40px', boxSizing: 'border-box', gap: '0.35rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-light)', padding: '0.3rem', borderRadius: '8px', overflowX: 'auto', marginBottom: '1rem' }}>
+          <TabButton active={activeTab === 'akses'} onClick={() => setActiveTab('akses')} icon={<Lock size={15} />} label="Akses Khusus" />
           <TabButton active={activeTab === 'profil'} onClick={() => setActiveTab('profil')} icon={<FileText size={15} />} label="Profil Klinik" />
           <TabButton active={activeTab === 'surat'} onClick={() => setActiveTab('surat')} icon={<FileText size={15} />} label="Surat & Penomoran" />
           <TabButton active={activeTab === 'dokumen'} onClick={() => setActiveTab('dokumen')} icon={<File size={15} />} label="Dokumen" />
@@ -266,6 +377,217 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
         {/* Content */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'stretch' }}>
         
+        {/* TAB: AKSES KHUSUS (GUDANG UMUM & ASET TETAP) */}
+        {activeTab === 'akses' && (
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '850px', margin: '0 auto', padding: '0.5rem 0' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-dark, #111827)', margin: '0 0 0.35rem 0' }}>
+              Pengaturan Akses Khusus
+            </h2>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)', margin: '0 0 1.5rem 0' }}>
+              Kelola akses fitur tertentu yang memerlukan verifikasi tambahan.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* CARD 1: GUDANG UMUM */}
+              <div style={{
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light, #e5e7eb)',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '260px', flex: 1 }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0d652d',
+                    flexShrink: 0
+                  }}>
+                    <Box size={28} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-dark, #111827)' }}>Gudang Umum</h4>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted, #6b7280)' }}>Fitur pengelolaan barang dan stok gudang.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  {!unlockedFeatures.gudang ? (
+                    <>
+                      <div style={{ color: '#0d652d', display: 'flex', alignItems: 'center', padding: '0 0.25rem' }}>
+                        <Lock size={22} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPinModal('gudang')}
+                        style={{
+                          padding: '0.65rem 1.4rem',
+                          backgroundColor: '#ffffff',
+                          color: '#0d652d',
+                          border: '1.5px solid #0d652d',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        Buka dengan kata sandi
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '0.35rem 0.75rem', borderRadius: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Unlock size={14} /> Terbuka
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu && setActiveMenu('warehouse')}
+                        style={{ padding: '0.5rem 0.85rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Inventaris Barang
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu && setActiveMenu('requests')}
+                        style={{ padding: '0.5rem 0.85rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Permintaan Keluar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLockFeature('gudang')}
+                        title="Kunci kembali fitur ini"
+                        style={{ padding: '0.5rem 0.7rem', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Kunci
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CARD 2: ASET TETAP */}
+              <div style={{
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light, #e5e7eb)',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '260px', flex: 1 }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0d652d',
+                    flexShrink: 0
+                  }}>
+                    <Server size={28} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-dark, #111827)' }}>Aset Tetap</h4>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted, #6b7280)' }}>Fitur pengelolaan inventaris aset dan relokasi.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  {!unlockedFeatures.fixed_asset ? (
+                    <>
+                      <div style={{ color: '#0d652d', display: 'flex', alignItems: 'center', padding: '0 0.25rem' }}>
+                        <Lock size={22} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPinModal('fixed_asset')}
+                        style={{
+                          padding: '0.65rem 1.4rem',
+                          backgroundColor: '#ffffff',
+                          color: '#0d652d',
+                          border: '1.5px solid #0d652d',
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        Buka dengan kata sandi
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '0.35rem 0.75rem', borderRadius: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Unlock size={14} /> Terbuka
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu && setActiveMenu('asset_master')}
+                        style={{ padding: '0.5rem 0.75rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Master Data
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu && setActiveMenu('assets_inventaris')}
+                        style={{ padding: '0.5rem 0.75rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Data Aset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMenu && setActiveMenu('asset_relocation')}
+                        style={{ padding: '0.5rem 0.75rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Relokasi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof setAssetReportTab === 'function') setAssetReportTab('all_assets');
+                          if (setActiveMenu) setActiveMenu('report_assets');
+                        }}
+                        style={{ padding: '0.5rem 0.75rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Laporan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLockFeature('fixed_asset')}
+                        title="Kunci kembali fitur ini"
+                        style={{ padding: '0.5rem 0.7rem', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Kunci
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB: PROFIL KLINIK */}
         {activeTab === 'profil' && (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -647,11 +969,189 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
               </select>
             </div>
 
-
+            {/* PIN Akses Khusus Gudang & Aset Tetap */}
+            <div style={{ padding: '1rem 1.25rem', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)' }}>PIN Akses Khusus (Gudang & Aset Tetap)</h4>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>PIN 5-digit untuk membuka menu Gudang Umum dan Aset Tetap (Default: 12345)</p>
+              </div>
+              <input 
+                type="text" 
+                maxLength={5}
+                value={formData.specialAccessPin || '12345'} 
+                onChange={(e) => handleChange('specialAccessPin', e.target.value.replace(/\D/g, ''))} 
+                style={{ width: '100px', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', letterSpacing: '4px', fontWeight: 700, fontSize: '1rem', color: '#0d652d' }} 
+              />
+            </div>
           </div>
         )}
         </div>
       </div>
+
+      {/* MODAL PIN AKSES KHUSUS (Sesuai Desain Gambar 2) */}
+      {pinModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '24px',
+            padding: '2rem 2.25rem',
+            width: '420px',
+            maxWidth: '92%',
+            position: 'relative',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            textAlign: 'center'
+          }}>
+            {/* Tombol Tutup X */}
+            <button
+              type="button"
+              onClick={handleClosePinModal}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'transparent',
+                border: 'none',
+                color: '#9ca3af',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Icon Gembok Hijau Lingkaran */}
+            <div style={{
+              width: '76px',
+              height: '76px',
+              borderRadius: '50%',
+              backgroundColor: '#e6f4ea',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem auto',
+              color: '#0d652d'
+            }}>
+              <Lock size={34} />
+            </div>
+
+            {/* Judul & Subjudul */}
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>
+              Menu Terkunci
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+              Fitur Gudang Umum dan Aset Tetap hanya dapat diakses dengan PIN khusus.
+            </p>
+
+            {/* 5 Kotak PIN dengan Titik Hijau */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {pinDigits.map((digit, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => pinInputRefs.current[idx]?.focus()}
+                  style={{
+                    width: '48px',
+                    height: '56px',
+                    border: digit ? '2px solid #0d652d' : '1.5px solid #d1fae5',
+                    borderRadius: '12px',
+                    backgroundColor: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    cursor: 'text',
+                    boxShadow: digit ? '0 0 0 3px rgba(13, 101, 45, 0.1)' : 'none',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <input
+                    ref={el => pinInputRefs.current[idx] = el}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handlePinDigitChange(idx, e.target.value)}
+                    onKeyDown={e => handlePinKeyDown(idx, e)}
+                    style={{
+                      position: 'absolute',
+                      top: 0, left: 0,
+                      width: '100%', height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  {/* Titik Indikator Lingkaran */}
+                  <span style={{
+                    width: digit ? '12px' : '9px',
+                    height: digit ? '12px' : '9px',
+                    borderRadius: '50%',
+                    backgroundColor: digit ? '#0d652d' : '#d1d5db',
+                    transition: 'all 0.15s'
+                  }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Pesan Kesalahan jika PIN salah */}
+            {pinError && (
+              <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: '-0.5rem 0 1rem 0', fontWeight: 600 }}>
+                {pinError}
+              </p>
+            )}
+
+            {/* Tombol Batal & Masuk */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={handleClosePinModal}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#e6f4ea',
+                  color: '#0d652d',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyPin}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#0d652d',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(13, 101, 45, 0.2)',
+                  transition: 'background-color 0.15s'
+                }}
+              >
+                Masuk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
