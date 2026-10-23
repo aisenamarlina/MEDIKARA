@@ -1,7 +1,519 @@
 import React, { useState } from 'react';
-import { Eye, Download, Printer, Edit3, Trash2, Send, Search, FileText, Calendar } from 'lucide-react';
+import { Eye, Download, Printer, Edit3, Trash2, Send, Search, FileText, Calendar, Table, Image as ImageIcon, Plus } from 'lucide-react';
 import { getTemplateData } from '../App';
 import { compressImage } from '../utils/imageCompressor';
+
+export const defaultLampiranTemplate = [
+  { 
+    title: "BAB I\nPENDAHULUAN", 
+    items: [
+      { title: "Latar Belakang", content: "" },
+      { title: "Maksud dan Tujuan", content: "" },
+      { title: "Sasaran", content: "" },
+      { title: "Asas", content: "" },
+      { title: "Ruang Lingkup", content: "" },
+      { title: "Pengertian Umum", content: "" }
+    ],
+    tables: [],
+    images: []
+  },
+  { 
+    title: "BAB II\n..................................", 
+    items: [
+      { title: "", content: "" },
+      { title: "", content: "" },
+      { title: "Dst........", content: "" }
+    ],
+    tables: [],
+    images: []
+  },
+  { 
+    title: "BAB III\n..................................", 
+    items: [
+      { title: "", content: "" },
+      { title: "", content: "" },
+      { title: "Dst........", content: "" }
+    ],
+    tables: [],
+    images: []
+  },
+  { 
+    title: "BAB IV\nPENUTUP", 
+    items: [
+      { title: "", content: "" },
+      { title: "", content: "" },
+      { title: "Dst........", content: "" }
+    ],
+    tables: [],
+    images: []
+  }
+];
+
+export const LampiranEditor = ({ lampiran = [], onChange }) => {
+  const lampiranArr = (lampiran && lampiran.length > 0) ? lampiran : defaultLampiranTemplate;
+
+  const updateBab = (bIdx, updatedFields) => {
+    const updated = [...lampiranArr];
+    updated[bIdx] = { ...updated[bIdx], ...updatedFields };
+    onChange(updated);
+  };
+
+  const handleAddBab = () => {
+    const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+    const nextRoman = romanNumerals[lampiranArr.length] || (lampiranArr.length + 1);
+    const newBab = {
+      title: `BAB ${nextRoman}\n..................................`,
+      items: [{ title: '', content: '' }, { title: 'Dst........', content: '' }],
+      tables: [],
+      images: []
+    };
+    onChange([...lampiranArr, newBab]);
+  };
+
+  const handleDeleteBab = (bIdx) => {
+    if (lampiranArr.length <= 1) return;
+    onChange(lampiranArr.filter((_, i) => i !== bIdx));
+  };
+
+  // Sub-items
+  const handleAddItem = (bIdx) => {
+    const bab = lampiranArr[bIdx];
+    const items = [...(bab.items || [])];
+    items.push({ title: '', content: '' });
+    updateBab(bIdx, { items });
+  };
+
+  const handleUpdateItem = (bIdx, iIdx, field, val) => {
+    const bab = lampiranArr[bIdx];
+    const items = [...(bab.items || [])];
+    const currentItem = typeof items[iIdx] === 'string' 
+      ? { title: items[iIdx], content: '' } 
+      : { ...(items[iIdx] || { title: '', content: '' }) };
+    items[iIdx] = { ...currentItem, [field]: val };
+    updateBab(bIdx, { items });
+  };
+
+  const handleDeleteItem = (bIdx, iIdx) => {
+    const bab = lampiranArr[bIdx];
+    const items = (bab.items || []).filter((_, i) => i !== iIdx);
+    updateBab(bIdx, { items });
+  };
+
+  // Tables
+  const handleAddTable = (bIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    tables.push({
+      id: `tbl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      title: `Tabel ${(bIdx + 1)}.${tables.length + 1} Rincian Kegiatan / Sasaran`,
+      headers: ["No", "Uraian / Komponen", "Keterangan"],
+      rows: [["1", "", ""]]
+    });
+    updateBab(bIdx, { tables });
+  };
+
+  const handleUpdateTableTitle = (bIdx, tIdx, title) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    tables[tIdx] = { ...tables[tIdx], title };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleDeleteTable = (bIdx, tIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = (bab.tables || []).filter((_, i) => i !== tIdx);
+    updateBab(bIdx, { tables });
+  };
+
+  const handleAddTableColumn = (bIdx, tIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    const headers = [...(tbl.headers || ["No", "Uraian"])];
+    headers.push(`Kolom ${headers.length + 1}`);
+    const rows = (tbl.rows || []).map(r => [...r, '']);
+    tables[tIdx] = { ...tbl, headers, rows };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleDeleteTableColumn = (bIdx, tIdx, cIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    if ((tbl.headers || []).length <= 1) return;
+    const headers = tbl.headers.filter((_, i) => i !== cIdx);
+    const rows = (tbl.rows || []).map(r => r.filter((_, i) => i !== cIdx));
+    tables[tIdx] = { ...tbl, headers, rows };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleUpdateTableHeader = (bIdx, tIdx, cIdx, val) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    const headers = [...(tbl.headers || [])];
+    headers[cIdx] = val;
+    tables[tIdx] = { ...tbl, headers };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleAddTableRow = (bIdx, tIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    const colCount = (tbl.headers || []).length || 3;
+    const newRow = Array(colCount).fill('');
+    newRow[0] = String((tbl.rows || []).length + 1);
+    const rows = [...(tbl.rows || []), newRow];
+    tables[tIdx] = { ...tbl, rows };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleDeleteTableRow = (bIdx, tIdx, rIdx) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    const rows = (tbl.rows || []).filter((_, i) => i !== rIdx);
+    tables[tIdx] = { ...tbl, rows };
+    updateBab(bIdx, { tables });
+  };
+
+  const handleUpdateTableCell = (bIdx, tIdx, rIdx, cIdx, val) => {
+    const bab = lampiranArr[bIdx];
+    const tables = [...(bab.tables || [])];
+    const tbl = tables[tIdx];
+    const rows = (tbl.rows || []).map(r => [...r]);
+    if (!rows[rIdx]) rows[rIdx] = [];
+    rows[rIdx][cIdx] = val;
+    tables[tIdx] = { ...tbl, rows };
+    updateBab(bIdx, { tables });
+  };
+
+  // Images
+  const handleAddImage = (bIdx) => {
+    const bab = lampiranArr[bIdx];
+    const images = [...(bab.images || [])];
+    images.push({
+      id: `img-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      title: `Gambar ${(bIdx + 1)}.${images.length + 1} Bagan / Denah Pelayanan`,
+      caption: '',
+      url: '',
+      width: '85%'
+    });
+    updateBab(bIdx, { images });
+  };
+
+  const handleUpdateImage = (bIdx, imgIdx, field, val) => {
+    const bab = lampiranArr[bIdx];
+    const images = [...(bab.images || [])];
+    images[imgIdx] = { ...images[imgIdx], [field]: val };
+    updateBab(bIdx, { images });
+  };
+
+  const handleDeleteImage = (bIdx, imgIdx) => {
+    const bab = lampiranArr[bIdx];
+    const images = (bab.images || []).filter((_, i) => i !== imgIdx);
+    updateBab(bIdx, { images });
+  };
+
+  const handleImageFileChange = async (bIdx, imgIdx, file) => {
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 900, 900, 0.85);
+      handleUpdateImage(bIdx, imgIdx, 'url', compressed);
+    } catch (err) {
+      console.error("Gagal mengompres gambar:", err);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.75rem' }}>
+      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4', backgroundColor: 'var(--bg-main)', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+        ℹ️ <strong>Format Lampiran Resmi:</strong> Susun BAB, poin uraian (huruf A, B, C...), tabel matriks/data, dan gambar bagan/alur sesuai kebutuhan lampiran surat/keputusan. Poin tanpa uraian otomatis menampilkan garis titik-titik (.....) standar naskah dinas.
+      </div>
+
+      {lampiranArr.map((bab, bIdx) => {
+        const items = bab.items || [];
+        const tables = bab.tables || [];
+        const images = bab.images || [];
+
+        return (
+          <div key={bIdx} style={{ padding: '0.85rem', border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: 'var(--bg-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            {/* Header BAB */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.2rem' }}>
+                  Judul BAB {bIdx + 1}
+                </label>
+                <textarea 
+                  className="input-field" 
+                  placeholder="Judul BAB (Misal: BAB I&#10;PENDAHULUAN)" 
+                  value={bab.title} 
+                  onChange={e => updateBab(bIdx, { title: e.target.value })} 
+                  style={{ fontWeight: 700, resize: 'vertical', minHeight: '44px', width: '100%' }} 
+                />
+              </div>
+              {lampiranArr.length > 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => handleDeleteBab(bIdx)} 
+                  title="Hapus BAB Ini"
+                  style={{ marginTop: '1.25rem', padding: '0.4rem 0.6rem', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fee2e2', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                >
+                  ✕ Hapus BAB
+                </button>
+              )}
+            </div>
+
+            {/* Sub-item Uraian (A, B, C...) */}
+            <div style={{ marginBottom: '1rem', padding: '0.6rem', backgroundColor: 'var(--bg-main)', borderRadius: '6px', border: '1px dashed var(--border-light)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+                  Poin Uraian (A, B, C...)
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => handleAddItem(bIdx)} 
+                  style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  + Tambah Poin
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {items.map((item, iIdx) => {
+                  const itTitle = typeof item === 'string' ? item : (item?.title || '');
+                  const itContent = typeof item === 'object' ? (item?.content || '') : '';
+                  const isDst = itTitle.toLowerCase().startsWith('dst');
+
+                  return (
+                    <div key={iIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0.35rem', backgroundColor: 'var(--bg-card)', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, minWidth: '22px', color: 'var(--primary)' }}>
+                          {isDst ? '•' : `${String.fromCharCode(65 + iIdx)}.`}
+                        </span>
+                        <input 
+                          type="text" 
+                          className="input-field" 
+                          placeholder={isDst ? "Dst........" : "Judul Poin (Misal: Latar Belakang)"} 
+                          value={itTitle} 
+                          onChange={e => handleUpdateItem(bIdx, iIdx, 'title', e.target.value)} 
+                          style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
+                        />
+                        {items.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleDeleteItem(bIdx, iIdx)} 
+                            title="Hapus Poin" 
+                            style={{ padding: '0.25rem 0.4rem', color: '#b91c1c', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      {!isDst && (
+                        <textarea 
+                          placeholder="Isi uraian teks (opsional. Kosongkan jika ingin menampilkan garis titik-titik resmi)...." 
+                          value={itContent} 
+                          onChange={e => handleUpdateItem(bIdx, iIdx, 'content', e.target.value)} 
+                          rows={1}
+                          style={{ marginLeft: '26px', fontSize: '0.78rem', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)', resize: 'vertical', minHeight: '30px' }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* TABEL-TABEL DI BAB INI */}
+            {tables.length > 0 && (
+              <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {tables.map((tbl, tIdx) => (
+                  <div key={tbl.id || tIdx} style={{ padding: '0.6rem', backgroundColor: 'rgba(59, 130, 246, 0.04)', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1d4ed8' }}>📊 Tabel:</span>
+                        <input 
+                          type="text" 
+                          className="input-field" 
+                          value={tbl.title || ''} 
+                          onChange={e => handleUpdateTableTitle(bIdx, tIdx, e.target.value)} 
+                          placeholder="Judul Tabel (Misal: Tabel 1.1 Rincian Alur Pelayanan)"
+                          style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteTable(bIdx, tIdx)} 
+                        style={{ padding: '0.2rem 0.5rem', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: '4px', background: '#fee2e2', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}
+                      >
+                        ✕ Hapus Tabel
+                      </button>
+                    </div>
+
+                    {/* Columns header editor */}
+                    <div style={{ overflowX: 'auto', marginBottom: '0.4rem' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', backgroundColor: '#fff' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f1f5f9' }}>
+                            {(tbl.headers || []).map((hdr, cIdx) => (
+                              <th key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '0.3rem', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                  <input 
+                                    type="text" 
+                                    value={hdr} 
+                                    onChange={e => handleUpdateTableHeader(bIdx, tIdx, cIdx, e.target.value)} 
+                                    style={{ width: '100%', fontSize: '0.75rem', fontWeight: 700, border: '1px solid #94a3b8', borderRadius: '3px', padding: '0.2rem' }}
+                                  />
+                                  {(tbl.headers || []).length > 1 && (
+                                    <button type="button" onClick={() => handleDeleteTableColumn(bIdx, tIdx, cIdx)} title="Hapus Kolom" style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '0.7rem' }}>✕</button>
+                                  )}
+                                </div>
+                              </th>
+                            ))}
+                            <th style={{ width: '40px', border: '1px solid #cbd5e1', padding: '0.3rem', textAlign: 'center' }}>
+                              <button type="button" onClick={() => handleAddTableColumn(bIdx, tIdx)} title="Tambah Kolom" style={{ padding: '0.2rem 0.4rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>+ Kol</button>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(tbl.rows || []).map((row, rIdx) => (
+                            <tr key={rIdx}>
+                              {row.map((cell, cIdx) => (
+                                <td key={cIdx} style={{ border: '1px solid #cbd5e1', padding: '0.2rem' }}>
+                                  <input 
+                                    type="text" 
+                                    value={cell || ''} 
+                                    onChange={e => handleUpdateTableCell(bIdx, tIdx, rIdx, cIdx, e.target.value)} 
+                                    style={{ width: '100%', fontSize: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '3px', padding: '0.25rem' }}
+                                    placeholder={cIdx === 0 ? String(rIdx + 1) : "Isi..."}
+                                  />
+                                </td>
+                              ))}
+                              <td style={{ border: '1px solid #cbd5e1', padding: '0.2rem', textAlign: 'center' }}>
+                                <button type="button" onClick={() => handleDeleteTableRow(bIdx, tIdx, rIdx)} title="Hapus Baris" style={{ color: '#dc2626', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <button 
+                      type="button" 
+                      onClick={() => handleAddTableRow(bIdx, tIdx)} 
+                      style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#fff', border: '1px solid #93c5fd', borderRadius: '4px', padding: '0.2rem 0.6rem', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      + Tambah Baris Data
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* GAMBAR-GAMBAR DI BAB INI */}
+            {images.length > 0 && (
+              <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {images.map((img, imgIdx) => (
+                  <div key={img.id || imgIdx} style={{ padding: '0.6rem', backgroundColor: 'rgba(16, 185, 129, 0.04)', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#047857' }}>🖼️ Gambar:</span>
+                        <input 
+                          type="text" 
+                          className="input-field" 
+                          value={img.title || ''} 
+                          onChange={e => handleUpdateImage(bIdx, imgIdx, 'title', e.target.value)} 
+                          placeholder="Judul Gambar (Misal: Gambar 1.1 Bagan Alur Pelayanan)"
+                          style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteImage(bIdx, imgIdx)} 
+                        style={{ padding: '0.2rem 0.5rem', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: '4px', background: '#fee2e2', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}
+                      >
+                        ✕ Hapus Gambar
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <div>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={e => handleImageFileChange(bIdx, imgIdx, e.target.files?.[0])} 
+                          style={{ fontSize: '0.75rem' }} 
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Ukuran:</label>
+                        <select 
+                          className="input-field" 
+                          value={img.width || '85%'} 
+                          onChange={e => handleUpdateImage(bIdx, imgIdx, 'width', e.target.value)} 
+                          style={{ padding: '0.2rem 0.4rem', fontSize: '0.72rem' }}
+                        >
+                          <option value="50%">50% (Sedang)</option>
+                          <option value="75%">75% (Besar)</option>
+                          <option value="85%">85% (Proporsional)</option>
+                          <option value="100%">100% (Penuh A4)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {img.url && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem', padding: '0.4rem', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                        <img src={img.url} alt="Preview" style={{ height: '55px', maxWidth: '100px', objectFit: 'contain', border: '1px solid #cbd5e1', borderRadius: '3px' }} />
+                        <div style={{ flex: 1 }}>
+                          <input 
+                            type="text" 
+                            className="input-field" 
+                            value={img.caption || ''} 
+                            onChange={e => handleUpdateImage(bIdx, imgIdx, 'caption', e.target.value)} 
+                            placeholder="Keterangan / Caption Gambar (Opsional)" 
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.4rem' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tombol Tambah Tabel & Tambah Gambar di BAB Ini */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                type="button" 
+                onClick={() => handleAddTable(bIdx)} 
+                style={{ fontSize: '0.72rem', color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '4px', padding: '0.25rem 0.6rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                + Tambah Tabel di BAB Ini
+              </button>
+              <button 
+                type="button" 
+                onClick={() => handleAddImage(bIdx)} 
+                style={{ fontSize: '0.72rem', color: '#047857', backgroundColor: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: '4px', padding: '0.25rem 0.6rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                + Tambah Gambar di BAB Ini
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      <button 
+        type="button" 
+        onClick={handleAddBab} 
+        style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', alignSelf: 'flex-start' }}
+      >
+        + Tambah BAB Baru
+      </button>
+    </div>
+  );
+};
 
 
 const SuratKeluar = ({
@@ -1574,9 +2086,9 @@ const SuratKeluar = ({
                       const file = e.target.files?.[0];
                       if (file) {
                         try {
-                          const compressed = await compressImage(file, 1200, 1200, 0.85);
+                          const compressed = await compressImage(file, 800, 800, 0.8);
                           if (compressed) {
-                            setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: compressed, baganAlirWidth: prev.sopData?.baganAlirWidth || 80 } }));
+                            setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: compressed } }));
                           }
                         } catch (err) {
                           console.error('Compress flowchart error:', err);
@@ -1584,37 +2096,10 @@ const SuratKeluar = ({
                       }
                     }} style={{ padding: '0.4rem', cursor: 'pointer' }} />
                     {letterForm.sopData?.baganAlirImage && (
-                      <div style={{ marginTop: '0.75rem' }}>
-                        {/* Slider ukuran gambar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-dark)', whiteSpace: 'nowrap' }}>📐 Ukuran:</span>
-                          <input
-                            type="range"
-                            min="20"
-                            max="100"
-                            step="5"
-                            value={letterForm.sopData?.baganAlirWidth || 80}
-                            onChange={e => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirWidth: Number(e.target.value) } }))}
-                            style={{ flex: 1, cursor: 'pointer', accentColor: 'var(--primary)' }}
-                          />
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', minWidth: '38px', textAlign: 'right' }}>{letterForm.sopData?.baganAlirWidth || 80}%</span>
-                          <button
-                            type="button"
-                            onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirWidth: 80 } }))}
-                            style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}
-                          >Reset</button>
-                        </div>
-                        {/* Preview */}
-                        <div style={{ position: 'relative', display: 'inline-block', width: '100%', textAlign: 'center' }}>
-                          <img
-                            src={letterForm.sopData.baganAlirImage}
-                            alt="Preview Bagan Alir"
-                            style={{ width: `${letterForm.sopData?.baganAlirWidth || 80}%`, maxWidth: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'block', margin: '0 auto' }}
-                          />
-                          <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: null } }))}
-                            style={{ position: 'absolute', top: '-8px', right: '0', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                        </div>
-                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>Geser slider untuk mengatur lebar gambar saat dicetak</p>
+                      <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                        <img src={letterForm.sopData.baganAlirImage} alt="Preview Bagan Alir" style={{ maxWidth: '200px', maxHeight: '200px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                        <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: null } }))}
+                          style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '10px', cursor: 'pointer' }}>✕</button>
                       </div>
                     )}
                   </div>
@@ -1741,46 +2226,6 @@ const SuratKeluar = ({
                   </div>
                 </div>
 
-                <div style={{ padding: '0.75rem', backgroundColor: (letterForm.skData?.gunakanLampiran ? 'rgba(16, 185, 129, 0.05)' : 'var(--bg-main)'), borderRadius: '8px', border: (letterForm.skData?.gunakanLampiran ? '1px solid #10b981' : '1px dashed var(--border-light)') }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: letterForm.skData?.gunakanLampiran ? '1rem' : 0 }}>
-                    <input type="checkbox" id="chkLampiran" checked={letterForm.skData?.gunakanLampiran || false} onChange={e => setLetterForm({ ...letterForm, skData: { ...letterForm.skData, gunakanLampiran: e.target.checked } })} />
-                    <label htmlFor="chkLampiran" style={{ fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>Gunakan Halaman Lampiran SK</label>
-                  </div>
-                  
-                  {letterForm.skData?.gunakanLampiran && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {(() => {
-                        const defaultLampiran = [
-                          { title: "BAB I\nPENDAHULUAN", items: ["Latar Belakang", "Maksud dan Tujuan", "Sasaran", "Asas", "Ruang Lingkup", "Pengertian Umum"] },
-                          { title: "BAB II\n..................................", items: ["", "", "Dst........"] },
-                          { title: "BAB III\n..................................", items: ["", "", "Dst........"] },
-                          { title: "BAB IV\nPENUTUP", items: ["", "", "Dst........"] }
-                        ];
-                        const lampiranArr = letterForm.skData?.lampiran || defaultLampiran;
-                        return lampiranArr.map((bab, bIdx) => (
-                          <div key={bIdx} style={{ padding: '0.5rem', border: '1px solid var(--border-light)', borderRadius: '6px', backgroundColor: 'var(--bg-card)' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <textarea className="input-field" placeholder="Judul BAB (Misal: BAB I\nPENDAHULUAN)" value={bab.title} onChange={e => { const arr = [...lampiranArr]; arr[bIdx].title = e.target.value; setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: arr } })); }} style={{ fontWeight: 600, resize: 'vertical', minHeight: '40px', flex: 1 }} />
-                              {lampiranArr.length > 1 && <button type="button" onClick={() => { const arr = lampiranArr.filter((_, i) => i !== bIdx); setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: arr } })); }} style={{ padding: '0 0.5rem', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: '4px', background: '#fee2e2', cursor: 'pointer', fontSize: '0.75rem' }}>Hapus BAB</button>}
-                            </div>
-                            
-                            <div style={{ paddingLeft: '1rem' }}>
-                              {bab.items.map((item, iIdx) => (
-                                <div key={iIdx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.3rem', alignItems: 'flex-start' }}>
-                                  <span style={{ paddingTop: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>{String.fromCharCode(65 + iIdx)}.</span>
-                                  <input type="text" className="input-field" value={item} onChange={e => { const arr = [...lampiranArr]; arr[bIdx].items[iIdx] = e.target.value; setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: arr } })); }} />
-                                  {bab.items.length > 1 && <button type="button" onClick={() => { const arr = [...lampiranArr]; arr[bIdx].items = arr[bIdx].items.filter((_, i) => i !== iIdx); setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: arr } })); }} style={{ padding: '0.2rem', color: '#b91c1c', border: 'none', background: 'transparent', cursor: 'pointer' }}>✕</button>}
-                                </div>
-                              ))}
-                              <button type="button" onClick={() => { const arr = [...lampiranArr]; arr[bIdx].items.push(''); setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: arr } })); }} style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.2rem' }}>+ Tambah Sub-item</button>
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                      <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, skData: { ...prev.skData, lampiran: [...(prev.skData?.lampiran || []), { title: 'BAB BARU', items: [''] }] } }))} style={{ padding: '0.5rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, alignSelf: 'flex-start' }}>+ Tambah BAB</button>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -1804,6 +2249,109 @@ const SuratKeluar = ({
                     }} style={{ padding: '0.2rem', color: '#b91c1c', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.85rem' }}>✕</button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* === LAMPIRAN: Checklist di bawah Tembusan untuk SEMUA jenis surat === */}
+            {true && (
+              <div style={{
+                marginTop: '0.5rem',
+                padding: '1rem',
+                backgroundColor: (
+                  letterForm.typeCode === "SKep"
+                    ? (letterForm.skData?.gunakanLampiran !== false ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-main)')
+                    : (letterForm.gunakanLampiran ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-main)')
+                ),
+                borderRadius: '8px',
+                border: (
+                  letterForm.typeCode === "SKep"
+                    ? (letterForm.skData?.gunakanLampiran !== false ? '1.5px solid #10b981' : '1px dashed var(--border-light)')
+                    : (letterForm.gunakanLampiran ? '1.5px solid #10b981' : '1px dashed var(--border-light)')
+                )
+              }}>
+                {/* Header checklist lampiran */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: 0 }}>
+                  <input
+                    type="checkbox"
+                    id="chkLampiranAll"
+                    style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer', flexShrink: 0 }}
+                    checked={
+                      letterForm.typeCode === "SKep"
+                        ? letterForm.skData?.gunakanLampiran !== false
+                        : Boolean(letterForm.gunakanLampiran)
+                    }
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      if (letterForm.typeCode === "SKep") {
+                        setLetterForm(prev => ({
+                          ...prev,
+                          skData: {
+                            ...prev.skData,
+                            gunakanLampiran: checked,
+                            lampiran: prev.skData?.lampiran || defaultLampiranTemplate
+                          }
+                        }));
+                      } else {
+                        setLetterForm(prev => ({
+                          ...prev,
+                          gunakanLampiran: checked,
+                          lampiranData: {
+                            ...(prev.lampiranData || {}),
+                            gunakanLampiran: checked,
+                            lampiran: prev.lampiranData?.lampiran || defaultLampiranTemplate
+                          }
+                        }));
+                      }
+                    }}
+                  />
+                  <label htmlFor="chkLampiranAll" style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      📎 Lampiran
+                      {(
+                        letterForm.typeCode === "SKep"
+                          ? letterForm.skData?.gunakanLampiran !== false
+                          : Boolean(letterForm.gunakanLampiran)
+                      ) && (
+                        <span style={{ fontSize: '0.72rem', backgroundColor: '#10b981', color: '#fff', borderRadius: '4px', padding: '1px 7px', fontWeight: 600 }}>Aktif</span>
+                      )}
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 400 }}>Centang untuk menambahkan halaman lampiran (BAB, Tabel, Gambar)</span>
+                  </label>
+                </div>
+
+                {/* Editor Lampiran - tampil jika dicentang */}
+                {(
+                  letterForm.typeCode === "SKep"
+                    ? letterForm.skData?.gunakanLampiran !== false
+                    : Boolean(letterForm.gunakanLampiran)
+                ) && (
+                  <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(16, 185, 129, 0.2)', paddingTop: '0.75rem' }}>
+                    <LampiranEditor
+                      lampiran={
+                        letterForm.typeCode === "SKep"
+                          ? (letterForm.skData?.lampiran || defaultLampiranTemplate)
+                          : (letterForm.lampiranData?.lampiran || defaultLampiranTemplate)
+                      }
+                      onChange={(newLampiran) => {
+                        if (letterForm.typeCode === "SKep") {
+                          setLetterForm(prev => ({
+                            ...prev,
+                            skData: { ...prev.skData, lampiran: newLampiran }
+                          }));
+                        } else {
+                          setLetterForm(prev => ({
+                            ...prev,
+                            lampiranData: {
+                              ...(prev.lampiranData || {}),
+                              gunakanLampiran: true,
+                              lampiran: newLampiran
+                            }
+                          }));
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

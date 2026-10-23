@@ -42,6 +42,85 @@ export const defaultOutgoingLetters = [
     recipientName: "Kepala Instalasi Rawat Jalan",
     subject: "Keputusan Direktur Tentang Standar Pelayanan Rawat Jalan",
     content: "Menimbang:\na. Bahwa untuk kelancaran pelayanan, diperlukan pengangkatan pegawai yang memenuhi syarat.\nb. Bahwa yang bersangkutan telah memenuhi persyaratan yang ditetapkan.\n\nMengingat:\n1. UU No. 36 Tahun 2009 tentang Kesehatan.\n2. Permenkes No. 9 Tahun 2014 tentang Klinik.\n\nMEMUTUSKAN\nMenetapkan:\nKESATU: Mengangkat tim implementasi standar pelayanan rawat jalan terpadu.\nKEDUA: Segala biaya dibebankan pada anggaran Klinik Baiturrahman.\nKETIGA: Keputusan ini berlaku sejak tanggal ditetapkan.",
+    skData: {
+      judulSK: "KEBIJAKAN STANDAR PELAYANAN RAWAT JALAN KLINIK BAITURRAHMAN",
+      noSK: "025/SKep/01-10.0/VIII/K-BTR/2026",
+      menimbang: [
+        "dalam rangka meningkatkan mutu pelayanan kesehatan kepada masyarakat di Klinik Baiturrahman perlunya ditetapkan standar pelayanan rawat jalan yang komprehensif",
+        "bahwa berdasarkan pertimbangan sebagaimana dimaksud dalam huruf a, perlu menetapkan Keputusan Direktur Klinik Baiturrahman"
+      ],
+      mengingat: [
+        "Undang-Undang Republik Indonesia Nomor 17 Tahun 2023 tentang Kesehatan",
+        "Peraturan Menteri Kesehatan Nomor 14 Tahun 2021 tentang Standar Kegiatan Usaha dan Produk pada Penyelenggaraan Perizinan Berusaha Berbasis Risiko Sektor Kesehatan"
+      ],
+      menetapkan: "Kebijakan Standar Pelayanan Rawat Jalan di Lingkungan Klinik Baiturrahman",
+      diktum: [
+        "Memberlakukan Standar Pelayanan Rawat Jalan di lingkungan Klinik Baiturrahman sebagaimana tercantum dalam Lampiran yang merupakan bagian tidak terpisahkan dari Keputusan ini",
+        "Keputusan ini berlaku sejak tanggal ditetapkan dengan ketentuan apabila dikemudian hari terdapat kekeliruan akan diadakan perbaikan sebagaimana mestinya"
+      ],
+      ditetapkanDi: "Garut",
+      tanggalSK: "2026-08-26",
+      namaDirektur: "dr. H. Asep Maryaman",
+      nikDirektur: "1.21.1",
+      gunakanLampiran: true,
+      lampiran: [
+        {
+          title: "BAB I\nPENDAHULUAN",
+          items: [
+            { title: "Latar Belakang", content: "" },
+            { title: "Maksud dan Tujuan", content: "" },
+            { title: "Sasaran", content: "" },
+            { title: "Asas", content: "" },
+            { title: "Ruang Lingkup", content: "" },
+            { title: "Pengertian Umum", content: "" }
+          ],
+          tables: [],
+          images: []
+        },
+        {
+          title: "BAB II\nSTANDAR DAN PROSEDUR PELAYANAN",
+          items: [
+            { title: "Alur Pelayanan Pasien Rawat Jalan", content: "" },
+            { title: "Standar Waktu Tunggu dan Pelayanan", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [
+            {
+              id: "tbl-sample-1",
+              title: "Tabel 1.1 Standar Waktu dan Penanggung Jawab Pelayanan",
+              headers: ["No", "Tahapan Pelayanan", "Standar Waktu", "Penanggung Jawab"],
+              rows: [
+                ["1", "Pendaftaran & Rekam Medis", "≤ 10 Menit", "Petugas Loket / Rekam Medis"],
+                ["2", "Pemeriksaan Tanda Vital & Triase", "≤ 5 Menit", "Perawat / Bidan"],
+                ["3", "Pemeriksaan & Konsultasi Dokter", "10 - 15 Menit", "Dokter Penanggung Jawab Pelayanan (DPJP)"],
+                ["4", "Pelayanan Farmasi / Obat Jadi", "≤ 15 Menit", "Asisten Apoteker / Petugas Farmasi"]
+              ]
+            }
+          ],
+          images: []
+        },
+        {
+          title: "BAB III\nPEMANTAUAN DAN EVALUASI MUTU",
+          items: [
+            { title: "Indikator Mutu Pelayanan", content: "" },
+            { title: "Pelaporan Insiden Keselamatan Pasien", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [],
+          images: []
+        },
+        {
+          title: "BAB IV\nPENUTUP",
+          items: [
+            { title: "Ketentuan Penutup", content: "" },
+            { title: "Ketentuan Peralihan", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [],
+          images: []
+        }
+      ]
+    },
     signatory: "Dr. H. Ahmad Fauzi, M.Kes",
     title: "Direktur Utama",
     attachments: "1 Berkas SOP",

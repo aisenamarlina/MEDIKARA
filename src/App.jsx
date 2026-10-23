@@ -659,7 +659,23 @@ export default function App() {
   };
 
   const [incomingLetters, setIncomingLetters] = useState(() => db.get("incoming_letters") || []);
-  const [outgoingLetters, setOutgoingLetters] = useState(() => db.get("outgoing_letters") || []);
+  const [outgoingLetters, setOutgoingLetters] = useState(() => {
+    const list = db.get("outgoing_letters") || [];
+    return list.map(l => {
+      if ((l.typeCode === "SKep" || l.templateType === "Surat Keputusan" || l.templateType === "SKep") && (!l.skData || l.skData.gunakanLampiran === undefined)) {
+        return {
+          ...l,
+          skData: {
+            ...(l.skData || {}),
+            judulSK: l.skData?.judulSK || l.subject,
+            noSK: l.skData?.noSK || l.docNo,
+            gunakanLampiran: true
+          }
+        };
+      }
+      return l;
+    });
+  });
   const [certificates, setCertificates] = useState(() => db.get("certificates") || []);
 
   // Global search filtering logic (helper)
@@ -1402,6 +1418,8 @@ export default function App() {
           subject: letterData.subject || "",
           content: letterData.content || "",
           skData: letterData.typeCode === "SKep" ? (letterData.skData || null) : null,
+          lampiranData: letterData.lampiranData || (letterData.skData?.lampiran ? { gunakanLampiran: letterData.skData.gunakanLampiran, lampiran: letterData.skData.lampiran } : null),
+          gunakanLampiran: letterData.gunakanLampiran || letterData.skData?.gunakanLampiran || false,
           pedomanData: letterData.typeCode === "Pdm" ? (letterData.pedomanData || null) : null,
           sopData: letterData.typeCode === "SOP" ? (letterData.sopData || null) : null,
           kakData: letterData.typeCode === "KAK" ? (letterData.kakData || null) : null,
@@ -2738,6 +2756,252 @@ export default function App() {
       );
     };
 
+    const renderLampiranDocument = (isSKep = true) => {
+      const clinicUpper = (settings?.clinicName || 'KLINIK BAITURRAHMAN').replace(/ GARUT$/i, '').toUpperCase();
+      const typeName = letterTypeMap[currentPrintDoc?.templateType || currentPrintDoc?.typeCode] || "Surat";
+      const typeNameUpper = typeName.toUpperCase();
+      
+      const nomor = isSKep
+        ? (currentPrintDoc.skData?.noSK || currentPrintDoc.docNo || '...../...../...../...../K-BTR/.......')
+        : (currentPrintDoc.lampiranData?.nomor || currentPrintDoc.docNo || '...../...../...../...../K-BTR/.......');
+        
+      const tentang = isSKep
+        ? (currentPrintDoc.skData?.judulSK || currentPrintDoc.subject || '.....................................................')
+        : (currentPrintDoc.lampiranData?.tentang || currentPrintDoc.subject || '.....................................................');
+
+      const kota = (isSKep ? currentPrintDoc.skData?.ditetapkanDi : currentPrintDoc.lampiranData?.ditetapkanDi) || settings?.city || 'Garut';
+      const tgl = (isSKep ? currentPrintDoc.skData?.tanggalSK : currentPrintDoc.lampiranData?.tanggal) || currentPrintDoc.date;
+      const namaDir = (isSKep ? currentPrintDoc.skData?.namaDirektur : currentPrintDoc.lampiranData?.namaDirektur) || currentPrintDoc.signatory || settings?.directorName || 'NAMA LENGKAP';
+      const nikDir = (isSKep ? currentPrintDoc.skData?.nikDirektur : currentPrintDoc.lampiranData?.nikDirektur) || settings?.directorNik || settings?.nik || '...........................';
+
+      const defaultBabs = [
+        { 
+          title: "BAB I\nPENDAHULUAN", 
+          items: [
+            { title: "Latar Belakang", content: "" },
+            { title: "Maksud dan Tujuan", content: "" },
+            { title: "Sasaran", content: "" },
+            { title: "Asas", content: "" },
+            { title: "Ruang Lingkup", content: "" },
+            { title: "Pengertian Umum", content: "" }
+          ],
+          tables: [],
+          images: []
+        },
+        { 
+          title: "BAB II\n..................................", 
+          items: [
+            { title: "", content: "" },
+            { title: "", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [],
+          images: []
+        },
+        { 
+          title: "BAB III\n..................................", 
+          items: [
+            { title: "", content: "" },
+            { title: "", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [],
+          images: []
+        },
+        { 
+          title: "BAB IV\nPENUTUP", 
+          items: [
+            { title: "", content: "" },
+            { title: "", content: "" },
+            { title: "Dst........", content: "" }
+          ],
+          tables: [],
+          images: []
+        }
+      ];
+
+      const rawBabs = isSKep 
+        ? (currentPrintDoc.skData?.lampiran || defaultBabs)
+        : (currentPrintDoc.lampiranData?.lampiran || currentPrintDoc.lampiran || defaultBabs);
+
+      const babs = Array.isArray(rawBabs) ? rawBabs : defaultBabs;
+
+      return (
+        <div className="lampiran-page" style={{ pageBreakBefore: 'always', breakBefore: 'page', paddingTop: '2.5rem', fontFamily: 'Arial, Helvetica, sans-serif', color: '#000' }}>
+          {/* Header Top-Right Lampiran (Sesuai Naskah Dinas Resmi Klinik Baiturrahman) */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2.5rem' }}>
+            <div style={{ width: '400px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textTransform: 'uppercase', fontSize: '10pt', fontWeight: 'bold', lineHeight: '1.4' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '85px', verticalAlign: 'top', padding: '2px 0' }}>LAMPIRAN</td>
+                    <td style={{ width: '15px', verticalAlign: 'top', textAlign: 'center', padding: '2px 0' }}>:</td>
+                    <td style={{ verticalAlign: 'top', padding: '2px 0' }}>
+                      {isSKep ? `KEPUTUSAN DIREKTUR ${clinicUpper}` : `${typeNameUpper} DIREKTUR ${clinicUpper}`}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ verticalAlign: 'top', padding: '2px 0' }}>NOMOR</td>
+                    <td style={{ verticalAlign: 'top', textAlign: 'center', padding: '2px 0' }}>:</td>
+                    <td style={{ verticalAlign: 'top', padding: '2px 0' }}>
+                      {nomor}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ verticalAlign: 'top', padding: '2px 0' }}>{isSKep ? 'TENTANG' : 'PERIHAL'}</td>
+                    <td style={{ verticalAlign: 'top', textAlign: 'center', padding: '2px 0' }}>:</td>
+                    <td style={{ verticalAlign: 'top', padding: '2px 0' }}>
+                      {tentang}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Konten BAB-BAB Lampiran */}
+          {babs.map((bab, bIdx) => (
+            <div key={bIdx} style={{ marginBottom: '2.25rem' }}>
+              {/* Judul BAB (Tengah & Huruf Tebal) */}
+              <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '1.25rem', fontSize: '11pt', lineHeight: '1.4' }}>
+                {bab.title?.split('\n').map((line, l) => (
+                  <div key={l} style={{ textTransform: 'uppercase' }}>{line}</div>
+                )) || <div>BAB {bIdx + 1}</div>}
+              </div>
+
+              {/* Sub-item (A, B, C...) */}
+              {bab.items && bab.items.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: (bab.tables?.length || bab.images?.length) ? '1.5rem' : 0 }}>
+                  {bab.items.map((rawItem, iIdx) => {
+                    const itemTitle = typeof rawItem === 'string' ? rawItem : (rawItem?.title || '');
+                    const itemContent = typeof rawItem === 'object' ? (rawItem?.content || '') : '';
+                    
+                    if (itemTitle.toLowerCase().startsWith('dst')) {
+                      return (
+                        <div key={iIdx} style={{ fontWeight: 'bold', paddingLeft: '28px', marginTop: '0.2rem' }}>
+                          {itemTitle}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={iIdx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                        <div style={{ width: '22px', fontWeight: 'bold', flexShrink: 0 }}>
+                          {String.fromCharCode(65 + iIdx)}.
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          {itemTitle && <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{itemTitle}</div>}
+                          {itemContent ? (
+                            <div style={{ textAlign: 'justify', lineHeight: '1.5', whiteSpace: 'pre-line' }}>{itemContent}</div>
+                          ) : (
+                            <div style={{ borderBottom: '1.5px dotted #000', marginTop: itemTitle ? '0.35rem' : '0.85rem', marginBottom: '0.2rem', width: '100%' }}></div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Tabel yang ditambahkan di BAB ini */}
+              {bab.tables && bab.tables.map((tbl, tIdx) => (
+                <div key={tbl.id || tIdx} style={{ margin: '1.5rem 0' }}>
+                  {tbl.title && (
+                    <div style={{ fontWeight: 'bold', fontSize: '10pt', marginBottom: '0.4rem', textAlign: 'left' }}>
+                      {tbl.title}
+                    </div>
+                  )}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '9.5pt', lineHeight: '1.4' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f3f4f6' }}>
+                        {(tbl.headers || ['No', 'Uraian', 'Keterangan']).map((h, hIdx) => (
+                          <th key={hIdx} style={{ border: '1px solid #000', padding: '6px 8px', textAlign: hIdx === 0 ? 'center' : 'left', fontWeight: 'bold', color: '#000' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(tbl.rows && tbl.rows.length > 0 ? tbl.rows : [['', '', '']]).map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          {row.map((cell, cIdx) => (
+                            <td key={cIdx} style={{ border: '1px solid #000', padding: '6px 8px', textAlign: cIdx === 0 ? 'center' : 'left', verticalAlign: 'top', color: '#000' }}>
+                              {cell || '\u00A0'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              {/* Gambar yang ditambahkan di BAB ini */}
+              {bab.images && bab.images.map((img, imgIdx) => (
+                <div key={img.id || imgIdx} style={{ margin: '1.75rem 0', textAlign: 'center' }}>
+                  {img.title && (
+                    <div style={{ fontWeight: 'bold', fontSize: '10.5pt', marginBottom: '0.5rem', textAlign: 'center' }}>
+                      {img.title}
+                    </div>
+                  )}
+                  {img.url ? (
+                    <img 
+                      src={img.url} 
+                      alt={img.title || `Lampiran Gambar ${imgIdx + 1}`} 
+                      style={{ 
+                        maxWidth: img.width || '85%', 
+                        maxHeight: '400px', 
+                        objectFit: 'contain', 
+                        border: '1px solid #999', 
+                        borderRadius: '4px',
+                        padding: '4px',
+                        backgroundColor: '#fff',
+                        display: 'inline-block'
+                      }} 
+                    />
+                  ) : null}
+                  {img.caption && (
+                    <div style={{ fontStyle: 'italic', fontSize: '9pt', marginTop: '0.4rem', color: '#333' }}>
+                      {img.caption}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+
+          {/* Tanda Tangan Lampiran (Kanan Bawah Sesuai Gambar) */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '3.5rem', pageBreakInside: 'avoid' }}>
+            <div style={{ width: '300px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', lineHeight: '1.4' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '105px' }}>Ditetapkan di</td>
+                    <td>: {kota}</td>
+                  </tr>
+                  <tr>
+                    <td>Pada tanggal</td>
+                    <td>: {tgl ? new Date(tgl).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '...........................'}</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <div style={{ marginTop: '1rem', fontWeight: 'bold', lineHeight: '1.3' }}>
+                DIREKTUR<br />{clinicUpper},
+              </div>
+
+              {renderSafeDigitalSignature()}
+
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>
+                {namaDir}
+              </div>
+              <div>NIK. {nikDir}</div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     return (
       <div style={{ 
         position: 'fixed',
@@ -2804,6 +3068,49 @@ export default function App() {
 
               {/* Desktop Header Actions */}
               <div className="preview-header-desktop-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                {currentPrintType === "letter" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentPrintDoc(prev => {
+                        if (!prev) return prev;
+                        const isSK = (prev.typeCode === "SKep" || prev.templateType === "Surat Keputusan" || prev.templateType === "SKep");
+                        if (isSK) {
+                          const currentVal = prev.skData?.gunakanLampiran !== false;
+                          return {
+                            ...prev,
+                            skData: { ...(prev.skData || {}), gunakanLampiran: !currentVal }
+                          };
+                        } else {
+                          const currentVal = Boolean(prev.gunakanLampiran || prev.lampiranData?.gunakanLampiran);
+                          return {
+                            ...prev,
+                            gunakanLampiran: !currentVal,
+                            lampiranData: { ...(prev.lampiranData || {}), gunakanLampiran: !currentVal }
+                          };
+                        }
+                      });
+                    }}
+                    title="Klik untuk menyalakan/mematikan halaman lampiran pada pratinjau surat ini"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.5rem 0.85rem',
+                      borderRadius: '8px',
+                      border: '1px solid #10b981',
+                      backgroundColor: ((currentPrintDoc.typeCode === "SKep" || currentPrintDoc.templateType === "Surat Keputusan" || currentPrintDoc.templateType === "SKep") ? (currentPrintDoc.skData?.gunakanLampiran !== false) : Boolean(currentPrintDoc.gunakanLampiran || currentPrintDoc.lampiranData?.gunakanLampiran || (currentPrintDoc.attachments && currentPrintDoc.attachments !== "-"))) ? '#ecfdf5' : '#ffffff',
+                      color: '#047857',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    📑 Lampiran: {((currentPrintDoc.typeCode === "SKep" || currentPrintDoc.templateType === "Surat Keputusan" || currentPrintDoc.templateType === "SKep") ? (currentPrintDoc.skData?.gunakanLampiran !== false) : Boolean(currentPrintDoc.gunakanLampiran || currentPrintDoc.lampiranData?.gunakanLampiran || (currentPrintDoc.attachments && currentPrintDoc.attachments !== "-"))) ? 'Aktif ✓' : 'Nonaktif'}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={async (e) => {
@@ -3206,7 +3513,7 @@ export default function App() {
                         </td>
                         <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'center' }}>
                           {currentPrintDoc.sopData?.baganAlirImage ? (
-                            <img src={currentPrintDoc.sopData.baganAlirImage} alt="Bagan Alir" style={{ width: `${currentPrintDoc.sopData?.baganAlirWidth || 80}%`, maxWidth: '100%', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                            <img src={currentPrintDoc.sopData.baganAlirImage} width="500" alt="Bagan Alir" style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain' }} />
                           ) : (
                             <span style={{ color: '#888', fontStyle: 'italic', fontSize: '9pt' }}>(Bagan Alir)</span>
                           )}
@@ -3349,70 +3656,9 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Lampiran (Optional, on new page) */}
-                  {currentPrintDoc.skData?.gunakanLampiran && (
-                    <div style={{ pageBreakBefore: 'always', paddingTop: '2rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
-                        <div style={{ width: '400px' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', textTransform: 'uppercase', fontSize: '10pt' }}>
-                            <tbody>
-                              <tr><td style={{ width: '90px', verticalAlign: 'top' }}>LAMPIRAN</td><td style={{ verticalAlign: 'top' }}></td></tr>
-                              <tr><td colSpan="2">KEPUTUSAN DIREKTUR KLINIK</td></tr>
-                              <tr><td colSpan="2">BAITURRAHMAN ...................................</td></tr>
-                              <tr><td style={{ verticalAlign: 'top' }}>NOMOR</td><td style={{ verticalAlign: 'top' }}>: {currentPrintDoc.skData?.noSK || '..../..../..../..../K-BTR/......'}</td></tr>
-                              <tr><td style={{ verticalAlign: 'top' }}>TENTANG</td><td style={{ verticalAlign: 'top' }}>: {currentPrintDoc.skData?.judulSK || '...................................'}</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {(currentPrintDoc.skData?.lampiran || []).map((bab, bIdx) => (
-                        <div key={bIdx} style={{ marginBottom: '1.5rem' }}>
-                          <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '1rem' }}>
-                            {bab.title?.split('\n').map((line, l) => <div key={l}>{line}</div>) || 'BAB ...'}
-                          </div>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                              {bab.items?.map((item, iIdx) => (
-                                item === 'Dst........' ? (
-                                  <tr key={iIdx}>
-                                    <td colSpan="2" style={{ verticalAlign: 'top', paddingTop: '0.4rem', fontWeight: 600 }}>
-                                      {item}
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  <tr key={iIdx}>
-                                    <td style={{ verticalAlign: 'top', width: '30px', paddingTop: '0.4rem' }}>{String.fromCharCode(65 + iIdx)}.</td>
-                                    <td style={{ verticalAlign: 'top', paddingTop: '0.4rem' }}>
-                                      {item && <div>{item}</div>}
-                                      <div style={{ borderBottom: '1.5px dotted black', marginTop: item ? '0.4rem' : '0.75rem', marginBottom: '0.2rem', width: '100%' }}></div>
-                                    </td>
-                                  </tr>
-                                )
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ))}
-
-                      {/* Tanda Tangan Lampiran */}
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '3rem' }}>
-                        <div style={{ width: '300px' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                              <tr><td style={{ width: '100px' }}>Ditetapkan di</td><td>: {currentPrintDoc.skData?.ditetapkanDi || '...........................'}</td></tr>
-                              <tr><td style={{ width: '100px' }}>Pada tanggal</td><td>: {currentPrintDoc.skData?.tanggalSK ? new Date(currentPrintDoc.skData.tanggalSK).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '...........................'}</td></tr>
-                            </tbody>
-                          </table>
-                          <div style={{ marginTop: '1rem', fontWeight: 'bold', lineHeight: '1.3' }}>
-                            DIREKTUR<br />{settings?.clinicName || 'KLINIK BAITURRAHMAN'},
-                          </div>
-                          {renderSafeDigitalSignature()}
-                          <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{currentPrintDoc.skData?.namaDirektur || 'NAMA LENGKAP'}</div>
-                          <div>NIK. {currentPrintDoc.skData?.nikDirektur || '...........................'}</div>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Lampiran SKep (Sesuai Standar Tata Naskah & Tampilan Gambar) */}
+                  {(currentPrintDoc.skData?.gunakanLampiran !== false) && (
+                    renderLampiranDocument(true)
                   )}
                 </div>
               ) : (currentPrintDoc.templateType === "Kerangka Acuan Kegiatan (KAK)" || currentPrintDoc.templateType === "KAK" || currentPrintDoc.typeCode === "KAK") ? (
@@ -5969,6 +6215,11 @@ export default function App() {
                     ))}
                   </ol>
                 </div>
+              )}
+
+              {/* Lampiran Surat Umum (jika bukan SKep dan opsi lampiran aktif) */}
+              {(currentPrintDoc.typeCode !== "SKep" && currentPrintDoc.templateType !== "SKep" && currentPrintDoc.templateType !== "Surat Keputusan") && (currentPrintDoc.gunakanLampiran || currentPrintDoc.lampiranData?.gunakanLampiran) && (
+                renderLampiranDocument(false)
               )}
               </>
 </>
