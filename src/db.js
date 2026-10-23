@@ -355,16 +355,29 @@ export const initDB = async () => {
         if (v !== undefined && v !== null) {
           if (k === 'settings') {
             const localSettings = lsGet('settings', defaultSettings);
+            const isLocalCustomSig = localSettings.signature && localSettings.signature !== defaultDirectorSignature;
+            const isServerCustomSig = v.signature && v.signature !== defaultDirectorSignature;
+            const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : (v.signature || defaultDirectorSignature));
+
+            const isLocalCustomStamp = localSettings.stamp && localSettings.stamp !== defaultClinicStamp;
+            const isServerCustomStamp = v.stamp && v.stamp !== defaultClinicStamp;
+            const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : (v.stamp || defaultClinicStamp));
+
+            const isLocalCustomLogo = localSettings.logo && localSettings.logo !== defaultSettings.logo && localSettings.logo !== '/logo.png';
+            const isServerCustomLogo = v.logo && v.logo !== defaultSettings.logo && v.logo !== '/logo.png';
+            const finalLogo = isServerCustomLogo ? v.logo : (isLocalCustomLogo ? localSettings.logo : (v.logo || defaultSettings.logo || '/logo.png'));
+
             const mergedSettings = {
               ...defaultSettings,
               ...localSettings,
               ...v,
-              signature: v.signature || localSettings.signature || defaultSettings.signature,
-              stamp: v.stamp || localSettings.stamp || defaultSettings.stamp,
-              logo: v.logo || localSettings.logo || defaultSettings.logo || '/logo.png'
+              signature: finalSignature,
+              stamp: finalStamp,
+              logo: finalLogo
             };
             lsSet('settings', mergedSettings, true);
-            if (!v.signature || !v.stamp) {
+            // Jika lokal memiliki TTD/Cap kustom yang belum ada di server, dorong ke server
+            if (isLocalCustomSig || isLocalCustomStamp || isLocalCustomLogo) {
               pushToServer('settings', mergedSettings);
             }
           } else if (ARRAY_COLLECTIONS.has(k)) {

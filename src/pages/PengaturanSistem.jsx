@@ -1,16 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FileText, File, FolderOpen, Shield, Database, Upload, Save, Image as ImageIcon, RefreshCw, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { db } from '../db';
 import { compressImage } from '../utils/imageCompressor';
 
 export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm }) {
   const [activeTab, setActiveTab] = useState('profil');
-  const [formData, setFormData] = useState(settings || {});
-  const [prevSettings, setPrevSettings] = useState(settings);
-  if (settings !== prevSettings) {
-    setPrevSettings(settings);
-    setFormData(settings || {});
-  }
+  const [formData, setFormData] = useState(() => db.get('settings') || settings || {});
+  
+  useEffect(() => {
+    if (settings) {
+      setFormData(prev => ({
+        ...settings,
+        ...prev,
+        signature: prev.signature || settings.signature,
+        stamp: prev.stamp || settings.stamp,
+        logo: prev.logo || settings.logo
+      }));
+    }
+  }, [settings]);
   const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [showPass, setShowPass] = useState({ old: false, new: false, confirm: false });
 
@@ -198,7 +205,10 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       handleChange(field, compressed);
       
       // Auto-save langsung ke database & cloud agar tidak hilang saat logout/refresh
-      const updatedForm = { ...formData, [field]: compressed };
+      const latest = db.get('settings') || settings || {};
+      const updatedForm = { ...latest, ...formData, [field]: compressed };
+      setFormData(updatedForm);
+      db.set('settings', updatedForm);
       if (typeof onSave === 'function') {
         onSave(updatedForm);
       }
@@ -216,7 +226,12 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
 
   const handleSave = () => {
     openConfirm("Apakah Anda yakin ingin menyimpan perubahan pengaturan ini?", () => {
-      onSave(formData);
+      const latest = db.get('settings') || settings || {};
+      const fullForm = { ...latest, ...formData };
+      db.set('settings', fullForm);
+      if (typeof onSave === 'function') {
+        onSave(fullForm);
+      }
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Pengaturan berhasil disimpan!', type: 'success' } }));
     });
   };
