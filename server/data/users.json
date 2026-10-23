@@ -11,12 +11,42 @@
   },
   {
     "id": "usr-002",
-    "username": "direktur",
-    "password": "direktur",
     "name": "Dr. H. Ahmad Fauzi, M.Kes",
     "role": "Direktur Utama",
-    "department": "Pimpinan & Direksi",
     "email": "direktur@klinikbaiturrahman.com",
+    "password": "direktur",
+    "username": "direktur",
+    "department": "Pimpinan & Direksi",
     "avatarColor": "#1e4a35"
+  },
+  {
+    "id": "usr-003",
+    "name": "Siti Rahmawati, A.Md.Farm",
+    "role": "Petugas Logistik & Gudang",
+    "email": "gudang@klinikbaiturrahman.com",
+    "password": "gudang",
+    "username": "gudang",
+    "department": "Instalasi Farmasi & Logistik",
+    "avatarColor": "#d97706"
+  },
+  {
+    "id": "usr-004",
+    "name": "Asep Maryaman",
+    "role": "Pengelola Aset & Sarpras",
+    "email": "sarpras@klinikbaiturrahman.com",
+    "password": "sarpras",
+    "username": "sarpras",
+    "department": "Kerumahtanggaan & Sarpras",
+    "avatarColor": "#7c3aed"
+  },
+  {
+    "id": "usr-005",
+    "name": "Asep Maryaman",
+    "role": "Pengelola Aset & Sarpras",
+    "email": "sarpras@klinikbaiturrahman.com",
+    "password": "sarpras",
+    "username": "sarpras",
+    "department": "Kerumahtanggaan & Sarpras",
+    "avatarColor": "#7c3aed"
   }
 ]

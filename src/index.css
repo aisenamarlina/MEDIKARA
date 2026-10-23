@@ -483,10 +483,11 @@ select.input-field {
   color: var(--text-dark);
 }
 .sidebar-item.active {
-  background: #f1f5f9; /* Light gray pill */
-  color: var(--text-dark);
-  font-weight: 600;
-  box-shadow: none; /* No shadow */
+  background: #dcfce7; /* Soft mint green pill */
+  color: #065f46; /* Dark emerald text */
+  font-weight: 700;
+  border-radius: 12px;
+  box-shadow: none;
   transform: none;
 }
 .sidebar-item.danger {

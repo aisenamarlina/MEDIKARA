@@ -17,7 +17,7 @@ import {
   Wallet, Utensils, Store, Sun, Moon, Bookmark,
   File, FolderOpen, Shield, Database, Upload, Info, Lock,
   Calendar, Activity, CheckCircle, Inbox, Send, FileBadge, User, Key, EyeOff, FileDown, Image as ImageIcon, Briefcase, Edit, Menu, ArrowLeft, AlertCircle,
-  ExternalLink, X, Sliders
+  ExternalLink, X, Sliders, MapPin, TrendingUp, Building2, Home, Folder
 } from 'lucide-react';
 import InventarisGudang from './pages/InventarisGudang';
 import DataAsetInventaris from './pages/DataAsetInventaris';
@@ -356,19 +356,20 @@ export default function App() {
         try { parsed = JSON.parse(savedUserJson); } catch (e) {}
       }
 
-      if ((parsed && parsed.username === "admin") || savedUsername === "admin") {
+      if (!parsed || parsed.username === "direktur" || savedUsername === "direktur" || (parsed && parsed.username === "admin") || savedUsername === "admin") {
         const users = db.get("users") || defaultUsers;
-        const savedAdmin = users.find(u => u.username && u.username.toLowerCase() === "admin");
+        const savedAdmin = users.find(u => u.username && u.username.toLowerCase() === "admin") || defaultUsers[0];
         const adminUser = {
           id: "usr-001",
           username: "admin",
           password: parsed?.password || savedAdmin?.password || "admin",
-          name: parsed?.name || savedAdmin?.name || "Admin",
-          role: parsed?.role || savedAdmin?.role || "Administrator",
-          department: parsed?.department || savedAdmin?.department || "Unit IT",
-          email: parsed?.email || savedAdmin?.email || "kbaiturrahmangarut@gmail.com",
-          avatarColor: parsed?.avatarColor || savedAdmin?.avatarColor || "#0d9488"
+          name: "Admin",
+          role: "Administrator",
+          department: "Unit IT",
+          email: "kbaiturrahmangarut@gmail.com",
+          avatarColor: "#0d9488"
         };
+        localStorage.setItem("kbr_session", "true");
         localStorage.setItem("kbr_session_user", "admin");
         localStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
         return adminUser;
@@ -383,6 +384,27 @@ export default function App() {
     }
     return defaultUsers[0];
   });
+
+  useEffect(() => {
+    if (currentUser?.username === "direktur" || currentUser?.role === "Direktur Utama") {
+      const users = db.get("users") || defaultUsers;
+      const savedAdmin = users.find(u => u.username && u.username.toLowerCase() === "admin") || defaultUsers[0];
+      const adminUser = {
+        id: "usr-001",
+        username: "admin",
+        password: savedAdmin?.password || "admin",
+        name: "Admin",
+        role: "Administrator",
+        department: "Unit IT",
+        email: "kbaiturrahmangarut@gmail.com",
+        avatarColor: "#0d9488"
+      };
+      setCurrentUser(adminUser);
+      localStorage.setItem("kbr_session", "true");
+      localStorage.setItem("kbr_session_user", "admin");
+      localStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
+    }
+  }, [currentUser]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -391,6 +413,8 @@ export default function App() {
 
   // Navigation states
   const [activeMenu, setActiveMenu] = useState("dashboard");
+  const [heroSlide, setHeroSlide] = useState(0); // 0 = welcome banner, 1 = clinic photo
+  const [dashboardRange, setDashboardRange] = useState("7d"); // "7d" | "30d" | "3m"
   const [dashboardChartTab, setDashboardChartTab] = useState("surat"); // "surat" | "stok" | "aset"
   const [dashboardTimeFilter, setDashboardTimeFilter] = useState("tahun_ini"); // "6_bulan" | "12_bulan" | "tahun_ini"
   const [assetReportTab, setAssetReportTab] = useState("all_assets"); // "all_assets" | "with_images" | "by_type"
@@ -440,6 +464,15 @@ export default function App() {
   const toggleTheme = () => {
     setTheme(prev => prev === "light" ? "dark" : "light");
   };
+
+  // Auto-rotate hero banner every 5 seconds when on dashboard
+  useEffect(() => {
+    if (activeMenu !== 'dashboard') return;
+    const timer = setInterval(() => {
+      setHeroSlide(prev => (prev + 1) % 2);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeMenu]);
 
   // Global Search states
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
@@ -965,11 +998,38 @@ export default function App() {
   // Modals / Detail viewing / Print previews / Header menus / Gudang Request Tab / Letter Reports
   const [requestFormType, setRequestFormType] = useState("out"); // "out" | "borrow"
   const [requestFilterTab, setRequestFilterTab] = useState("all"); // "all" | "out" | "borrow"
-  const [letterReportFilter, setLetterReportFilter] = useState({ month: "08", year: "2026", type: "all" });
+  const [letterReportFilter, setLetterReportFilter] = useState({ month: "08", year: "2026", type: "all", unit: "all" });
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentPrintDoc, setCurrentPrintDoc] = useState(null);
   const [currentPrintType, setCurrentPrintType] = useState(null); // 'letter', 'cert', 'report', 'report_letters'
+  const [previewPageCount, setPreviewPageCount] = useState(1);
+
+  // Hitung jumlah halaman fisik (A4) secara akurat saat dokumen pratinjau dibuka
+  useEffect(() => {
+    if (!currentPrintDoc) {
+      setPreviewPageCount(1);
+      return;
+    }
+    if (currentPrintType === "cert") {
+      setPreviewPageCount(1);
+      return;
+    }
+    const updatePages = () => {
+      const printArea = document.querySelector('.print-area');
+      if (printArea) {
+        const w = printArea.offsetWidth || 794;
+        const a4H = w * (297 / 210);
+        const scrollH = printArea.scrollHeight || a4H;
+        // Toleransi padding/margin 30px
+        const calculated = Math.max(1, Math.ceil((scrollH - 30) / (a4H - 20)));
+        setPreviewPageCount(calculated);
+      }
+    };
+    const t1 = setTimeout(updatePages, 80);
+    const t2 = setTimeout(updatePages, 350);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [currentPrintDoc, currentPrintType]);
   const [selectedReportPeriod, setSelectedReportPeriod] = useState({ month: "08", year: "2026", type: "all" });
   const [reportFilters, setReportFilters] = useState({
     suratMasuk: true,
@@ -1023,7 +1083,7 @@ export default function App() {
   ]);
 
   
-  const buildLetterReportDoc = (month, year, type) => {
+  const buildLetterReportDoc = (month, year, type, unit = "all") => {
     const doc = new jsPDF();
     const clinicName = settings.clinicName || "KLINIK BAITURRAHMAN GARUT";
     
@@ -1044,7 +1104,9 @@ export default function App() {
     // Title
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    const titleType = type === 'in' ? 'SURAT MASUK' : type === 'out' ? 'SURAT KELUAR' : 'PERSURATAN (MASUK & KELUAR)';
+    const unitObj = unit !== 'all' ? unitCodes.find(u => u.code === unit || u.name === unit) : null;
+    const unitTitle = unitObj ? ` - UNIT ${unitObj.name.toUpperCase()}` : '';
+    const titleType = (type === 'in' ? 'SURAT MASUK' : type === 'out' ? 'SURAT KELUAR' : 'PERSURATAN (MASUK & KELUAR)') + unitTitle;
     doc.text(`LAPORAN REKAPITULASI ${titleType}`, 105, 40, { align: "center" });
     
     const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -1053,7 +1115,7 @@ export default function App() {
     doc.text(`PERIODE BULAN: ${monthName.toUpperCase()} ${year}`, 105, 46, { align: "center" });
     
     // Get Data
-    const reportData = getFilteredLetterReport(month, year, type);
+    const reportData = getFilteredLetterReport(month, year, type, unit);
     const tableData = reportData.map((row, index) => [
       index + 1,
       row.noSurat,
@@ -1078,16 +1140,18 @@ export default function App() {
     return { doc, titleType, monthName };
   };
 
-  const generateJSPDFReport = (month, year, type) => {
-    const { doc, titleType, monthName } = buildLetterReportDoc(month, year, type);
+  const generateJSPDFReport = (month, year, type, unit = "all") => {
+    const { doc, titleType, monthName } = buildLetterReportDoc(month, year, type, unit);
     doc.save(`Laporan_${titleType.replace(/ /g, '_')}_${monthName}_${year}.pdf`);
   };
 
-  const generateWordReport = (month, year, type) => {
-    const titleType = type === 'in' ? 'SURAT MASUK' : type === 'out' ? 'SURAT KELUAR' : 'PERSURATAN (MASUK & KELUAR)';
+  const generateWordReport = (month, year, type, unit = "all") => {
+    const unitObj = unit !== 'all' ? unitCodes.find(u => u.code === unit || u.name === unit) : null;
+    const unitTitle = unitObj ? ` - UNIT ${unitObj.name.toUpperCase()}` : '';
+    const titleType = (type === 'in' ? 'SURAT MASUK' : type === 'out' ? 'SURAT KELUAR' : 'PERSURATAN (MASUK & KELUAR)') + unitTitle;
     const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
     const monthName = months[parseInt(month, 10) - 1] || "Agustus";
-    const reportData = getFilteredLetterReport(month, year, type);
+    const reportData = getFilteredLetterReport(month, year, type, unit);
     
     let tableHTML = `<table border="1" style="border-collapse: collapse; width: 100%;">`;
     tableHTML += `<thead><tr>`;
@@ -1133,8 +1197,8 @@ export default function App() {
   };
 
 
-  const previewJSPDFReport = (month, year, type) => {
-    const { doc, titleType, monthName } = buildLetterReportDoc(month, year, type);
+  const previewJSPDFReport = (month, year, type, unit = "all") => {
+    const { doc, titleType, monthName } = buildLetterReportDoc(month, year, type, unit);
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     const fileName = `Laporan_${titleType.replace(/ /g, '_')}_${monthName}_${year}.pdf`;
@@ -1147,8 +1211,8 @@ export default function App() {
     });
   };
 
-  const printJSPDFReport = (month, year, type) => {
-    const { doc } = buildLetterReportDoc(month, year, type);
+  const printJSPDFReport = (month, year, type, unit = "all") => {
+    const { doc } = buildLetterReportDoc(month, year, type, unit);
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     const iframe = document.createElement('iframe');
@@ -1158,11 +1222,12 @@ export default function App() {
     iframe.onload = () => { iframe.contentWindow.print(); };
   };
 
-  const getFilteredLetterReport = (month = "08", year = "2026", type = "all") => {
+  const getFilteredLetterReport = (month = "08", year = "2026", type = "all", unit = "all") => {
     let list = [];
     const targetMonth = month || "08";
     const targetYear = year || "2026";
     const targetType = type || "all";
+    const targetUnit = unit || "all";
 
     if (targetType === "all" || targetType === "in") {
       (incomingLetters || []).forEach(l => {
@@ -1170,7 +1235,8 @@ export default function App() {
         const d = l.date ? new Date(l.date) : null;
         const mStr = d && !isNaN(d.getTime()) ? String(d.getMonth() + 1).padStart(2, "0") : (l.date ? String(l.date).split('-')[1] : "08");
         const yStr = d && !isNaN(d.getTime()) ? String(d.getFullYear()) : (l.date ? String(l.date).split('-')[0] : "2026");
-        if (mStr === targetMonth && yStr === targetYear) {
+        const matchUnit = targetUnit === "all" || (l.disposition && l.disposition.toLowerCase().includes(targetUnit.toLowerCase()));
+        if (mStr === targetMonth && yStr === targetYear && matchUnit) {
           list.push({
             type: "Surat Masuk",
             date: l.date || '-',
@@ -1189,7 +1255,8 @@ export default function App() {
         const d = l.date ? new Date(l.date) : null;
         const mStr = d && !isNaN(d.getTime()) ? String(d.getMonth() + 1).padStart(2, "0") : (l.date ? String(l.date).split('-')[1] : "08");
         const yStr = d && !isNaN(d.getTime()) ? String(d.getFullYear()) : (l.date ? String(l.date).split('-')[0] : "2026");
-        if (mStr === targetMonth && yStr === targetYear) {
+        const matchUnit = targetUnit === "all" || l.unitCode === targetUnit || l.unit === targetUnit || (unitCodes.find(u => u.code === targetUnit)?.name === l.unit);
+        if (mStr === targetMonth && yStr === targetYear && matchUnit) {
           list.push({
             type: "Surat Keluar",
             date: l.date || '-',
@@ -1207,6 +1274,8 @@ export default function App() {
       if (targetType === "all" || targetType === "in") {
         (incomingLetters || []).forEach(l => {
           if (!l) return;
+          const matchUnit = targetUnit === "all" || (l.disposition && l.disposition.toLowerCase().includes(targetUnit.toLowerCase()));
+          if (!matchUnit) return;
           list.push({
             type: "Surat Masuk",
             date: l.date || '-',
@@ -1221,6 +1290,8 @@ export default function App() {
       if (targetType === "all" || targetType === "out") {
         (outgoingLetters || []).forEach(l => {
           if (!l) return;
+          const matchUnit = targetUnit === "all" || l.unitCode === targetUnit || l.unit === targetUnit || (unitCodes.find(u => u.code === targetUnit)?.name === l.unit);
+          if (!matchUnit) return;
           list.push({
             type: "Surat Keluar",
             date: l.date || '-',
@@ -1348,6 +1419,7 @@ export default function App() {
     docNo: "",
     typeCode: "SKet", 
     unitCode: "01-10.0", 
+    unit: "Direktur",
     destination: "", 
     recipientName: "", 
     subject: initialTemplate.subject, 
@@ -1403,10 +1475,16 @@ export default function App() {
         const docNo = letterData.docNo;
         const letterId = isEditing ? letterData.id : ("SU-" + Date.now());
 
+        const unitObj = unitCodes.find(u => u.code === letterData.unitCode || u.name === letterData.unit);
+        const unitName = unitObj ? unitObj.name : (letterData.unit || "Direktur");
+        const unitCode = unitObj ? unitObj.code : (letterData.unitCode || "01-10.0");
+
         const savedLetter = {
           ...letterData,
           id: letterId,
           docNo,
+          unit: unitName,
+          unitCode: unitCode,
           date: letterData.date || new Date().toISOString().split('T')[0],
           createdAt: letterData.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -1453,7 +1531,7 @@ export default function App() {
         setActivityLogs(db.get("activity_logs"));
         setCurrentPrintDoc(savedLetter);
         setCurrentPrintType("letter");
-        setLetterForm({ docNo: "", date: new Date().toISOString().split('T')[0], typeCode: "SB", destination: "", subject: "", content: "", attachments: [], skData: null, pedomanData: null, sopData: null, kakData: null, stData: null });
+        setLetterForm({ docNo: "", date: new Date().toISOString().split('T')[0], typeCode: "SB", unitCode: "01-10.0", unit: "Direktur", destination: "", subject: "", content: "", attachments: [], skData: null, pedomanData: null, sopData: null, kakData: null, stData: null });
         window.dispatchEvent(new CustomEvent('app-toast', { 
           detail: { message: isEditing ? `Perubahan dokumen [${docNo}] berhasil disimpan!` : "Surat keluar berhasil dibuat!", type: 'success' } 
         }));
@@ -2396,6 +2474,7 @@ export default function App() {
             el.style.display = 'none';
           }
         });
+        cloneEl.querySelectorAll('.screen-page-guide').forEach(el => el.remove());
 
         // Reset semua parent wrapper agar tidak membatasi overflow / terpotong
         let parent = cloneEl.parentElement;
@@ -2724,7 +2803,8 @@ export default function App() {
       printDocSubtitle = `Laporan_Persuratan_${currentPrintDoc?.month || '08'}_${currentPrintDoc?.year || '2026'}.pdf`;
     } else {
       const typeName = letterTypeMap[currentPrintDoc?.templateType || currentPrintDoc?.typeCode] || "Surat Keluar";
-      printDocTitle = currentPrintDoc?.perihal || currentPrintDoc?.title || `${typeName} - ${currentPrintDoc?.docNo || ''}`;
+      const docSubject = currentPrintDoc?.sopData?.judulSop || currentPrintDoc?.skData?.judulSK || currentPrintDoc?.subject || currentPrintDoc?.perihal;
+      printDocTitle = docSubject ? `${typeName}: ${docSubject}` : `${typeName} - ${currentPrintDoc?.docNo || ''}`;
       printDocSubtitle = `${currentPrintDoc?.docNo ? String(currentPrintDoc.docNo).replace(/\//g, '_') : 'Dokumen_Surat'}.pdf`;
     }
 
@@ -3057,10 +3137,27 @@ export default function App() {
                   <FileText size={20} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#064e3b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {printDocTitle}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#064e3b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {printDocTitle}
+                    </h3>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.2rem 0.65rem',
+                      backgroundColor: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      borderRadius: '20px',
+                      color: '#047857',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      📄 Total: {previewPageCount} Lembar (A4)
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', marginTop: '2px' }}>
                     {printDocSubtitle}
                   </span>
                 </div>
@@ -3403,19 +3500,7 @@ export default function App() {
                             <span style={{ width: '110px' }}>Halaman</span>
                             <span>:&nbsp;&nbsp;</span>
                             <span className="sop-halaman-val">
-                              {(() => {
-                                const sections = currentPrintDoc.sopData?.sections || [];
-                                let totalLines = 0;
-                                sections.forEach(s => {
-                                  (s.items || []).forEach(it => {
-                                    totalLines += Math.max(1, Math.ceil((it || '').length / 65));
-                                  });
-                                });
-                                if (currentPrintDoc.sopData?.baganAlirImage) totalLines += 12;
-                                if (currentPrintDoc.sopData?.rekamHistoris?.length) totalLines += currentPrintDoc.sopData.rekamHistoris.length * 2;
-                                const estPages = totalLines <= 20 ? 1 : Math.ceil((totalLines - 20) / 45) + 1;
-                                return `1 dari ${estPages}`;
-                              })()}
+                              {`1 dari ${previewPageCount || 1}`}
                             </span>
                           </div>
                         </td>
@@ -6954,6 +7039,27 @@ export default function App() {
               </div>
             );
           })()}
+
+          {/* Screen Page Indicator Footer (Screen only, excluded from Print/PDF) */}
+          <div className="screen-page-guide no-print" style={{
+            marginTop: '2rem',
+            paddingTop: '0.75rem',
+            borderTop: '1px dashed #cbd5e1',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.78rem',
+            color: '#64748b',
+            boxSizing: 'border-box'
+          }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <FileText size={13} style={{ color: '#059669' }} />
+              <span>Dokumen Resmi Klinik Baiturrahman</span>
+            </span>
+            <span style={{ fontWeight: 700, color: '#047857', backgroundColor: '#ecfdf5', padding: '0.2rem 0.65rem', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+              📄 Halaman 1 dari {previewPageCount || 1} • Total: {previewPageCount || 1} Lembar (A4)
+            </span>
+          </div>
         </div>
         </div>
         </div>
@@ -7136,60 +7242,119 @@ export default function App() {
             overscrollBehaviorY: 'contain'
           }}
         >
-          <button onClick={() => { setActiveMenu("dashboard"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "dashboard" ? "active" : ""}`} title={sidebarCollapsed ? "Dashboard" : ""}>
-            <LayoutDashboard size={19} />
+          {/* Dashboard */}
+          <button 
+            onClick={() => { setActiveMenu("dashboard"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
+            className={`sidebar-item ${activeMenu === "dashboard" ? "active" : ""}`} 
+            title={sidebarCollapsed ? "Dashboard" : ""}
+          >
+            <Home size={19} />
             {!sidebarCollapsed && <span>Dashboard</span>}
           </button>
 
-          {/* Sistem Surat */}
-          {!sidebarCollapsed ? (
-            <div className="sidebar-header" onClick={() => toggleSystem("surat")}>
-              <span>Sistem Surat</span>
-              {openSystems.surat ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {/* Persuratan (Collapsible / Direct) */}
+          <button 
+            onClick={() => { 
+              if (sidebarCollapsed) { setSidebarCollapsed(false); }
+              toggleSystem("surat");
+            }} 
+            className={`sidebar-item ${['letters_in', 'letters_out'].includes(activeMenu) ? 'active' : ''}`}
+            title={sidebarCollapsed ? "Persuratan" : ""}
+            style={{ justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <Mail size={19} />
+              {!sidebarCollapsed && <span>Persuratan</span>}
             </div>
-          ) : <div style={{ height: '8px' }} />}
-          {(openSystems.surat || sidebarCollapsed) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: sidebarCollapsed ? '0' : '0.5rem' }}>
-              <button onClick={() => { setActiveMenu("letters_in"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "letters_in" ? "active" : ""}`} title={sidebarCollapsed ? "Surat Masuk" : ""}>
-                <Mail size={18} />
-                {!sidebarCollapsed && <span>Surat Masuk</span>}
+            {!sidebarCollapsed && (
+              openSystems.surat ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+            )}
+          </button>
+          
+          {/* Sub menu Persuratan */}
+          {openSystems.surat && !sidebarCollapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1.75rem', marginBottom: '0.25rem' }}>
+              <button 
+                onClick={() => setActiveMenu("letters_in")} 
+                className={`sidebar-item ${activeMenu === "letters_in" ? "active" : ""}`}
+                style={{ padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+              >
+                <span>Surat Masuk</span>
               </button>
-              <button onClick={() => { setActiveMenu("letters_out"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "letters_out" ? "active" : ""}`} title={sidebarCollapsed ? "Surat Keluar" : ""}>
-                <FileText size={18} />
-                {!sidebarCollapsed && <span>Surat Keluar</span>}
-              </button>
-              <button onClick={() => { setActiveMenu("certificates"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "certificates" ? "active" : ""}`} title={sidebarCollapsed ? "Sertifikat" : ""}>
-                <Award size={18} />
-                {!sidebarCollapsed && <span>Sertifikat</span>}
-              </button>
-              <button onClick={() => { setActiveMenu("archive"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "archive" ? "active" : ""}`} title={sidebarCollapsed ? "Arsip Digital" : ""}>
-                <FolderArchive size={18} />
-                {!sidebarCollapsed && <span>Arsip Digital</span>}
+              <button 
+                onClick={() => setActiveMenu("letters_out")} 
+                className={`sidebar-item ${activeMenu === "letters_out" ? "active" : ""}`}
+                style={{ padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+              >
+                <span>Surat Keluar</span>
               </button>
             </div>
           )}
 
-          {/* ADMINISTRASI (Gudang Umum & Aset Tetap telah dipindahkan ke Pengaturan Akses Khusus) */}
-          <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(0, 0, 0, 0.05)', flexShrink: 0 }}>
-            {!sidebarCollapsed && (
-              <div className="sidebar-header" style={{ cursor: 'default' }}>
-                <span>ADMINISTRASI</span>
-              </div>
-            )}
-            <button onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "reports" ? "active" : ""}`} title={sidebarCollapsed ? "Laporan Bulanan" : ""}>
-              <FileBarChart2 size={18} />
-              {!sidebarCollapsed && <span>Laporan Bulanan</span>}
-            </button>
-            <button onClick={() => { setActiveMenu("settings"); if (sidebarCollapsed) setSidebarCollapsed(false); }} className={`sidebar-item ${activeMenu === "settings" ? "active" : ""}`} title={sidebarCollapsed ? "Pengaturan Sistem" : ""}>
-              <Settings size={18} />
-              {!sidebarCollapsed && <span>Pengaturan Sistem</span>}
-            </button>
+          {/* Sertifikat & Piagam */}
+          <button 
+            onClick={() => { setActiveMenu("certificates"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
+            className={`sidebar-item ${activeMenu === "certificates" ? "active" : ""}`} 
+            title={sidebarCollapsed ? "Sertifikat & Piagam" : ""}
+          >
+            <Award size={19} />
+            {!sidebarCollapsed && <span>Sertifikat & Piagam</span>}
+          </button>
 
-            <button onClick={handleLogout} className="sidebar-item danger" style={{ marginTop: '0.2rem' }} title={sidebarCollapsed ? "Keluar" : ""}>
-              <LogOut size={18} />
-              {!sidebarCollapsed && <span>Keluar</span>}
-            </button>
-          </div>
+          {/* Arsip Digital */}
+          <button 
+            onClick={() => { setActiveMenu("archive"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
+            className={`sidebar-item ${activeMenu === "archive" ? "active" : ""}`} 
+            title={sidebarCollapsed ? "Arsip Digital" : ""}
+          >
+            <Folder size={19} />
+            {!sidebarCollapsed && <span>Arsip Digital</span>}
+          </button>
+
+          {/* Laporan */}
+          <button 
+            onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
+            className={`sidebar-item ${activeMenu === "reports" ? "active" : ""}`} 
+            title={sidebarCollapsed ? "Laporan" : ""}
+            style={{ justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <FileText size={19} />
+              {!sidebarCollapsed && <span>Laporan</span>}
+            </div>
+            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
+          </button>
+
+          {/* Pengaturan Sistem */}
+          <button 
+            onClick={() => { setActiveMenu("settings"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
+            className={`sidebar-item ${activeMenu === "settings" ? "active" : ""}`} 
+            title={sidebarCollapsed ? "Pengaturan Sistem" : ""}
+            style={{ justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <Settings size={19} />
+              {!sidebarCollapsed && <span>Pengaturan Sistem</span>}
+            </div>
+            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
+          </button>
+
+          {/* Spacer */}
+          <div style={{ flex: 1, minHeight: '1rem' }} />
+
+
+
+
+          {/* Logout button */}
+          <button 
+            onClick={handleLogout} 
+            className="sidebar-item danger" 
+            style={{ marginTop: '0.4rem' }} 
+            title={sidebarCollapsed ? "Keluar" : ""}
+          >
+            <LogOut size={18} />
+            {!sidebarCollapsed && <span>Keluar</span>}
+          </button>
         </nav>
       </aside>
 
@@ -7265,48 +7430,49 @@ export default function App() {
             {activeMenu === "dashboard" && (
               <div className="header-search-box" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <button 
-                onClick={() => {
-                  if (globalSearchQuery.trim() !== "" && getSearchResults().length > 0) {
-                    handleSearchResultClick(getSearchResults()[0]);
-                  } else {
-                    document.getElementById('global-search-input')?.focus();
-                  }
-                }}
-                style={{ position: 'absolute', left: '10px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                title="Cari"
-              >
-                <Search size={14} style={{ color: 'var(--text-muted)' }} />
-              </button>
-              <input 
-                id="global-search-input"
-                type="text" 
-                placeholder="Search" 
-                value={globalSearchQuery}
-                onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && globalSearchQuery.trim() !== "" && getSearchResults().length > 0) {
-                    handleSearchResultClick(getSearchResults()[0]);
-                  }
-                }}
-                style={{ 
-                  padding: '0.35rem 1rem 0.35rem 2.2rem', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: '6px', 
-                  outline: 'none', 
-                  fontSize: '0.8rem',
-                  width: '220px',
-                  backgroundColor: 'var(--bg-main)',
-                  color: 'var(--text-dark)'
-                }} 
-              />
+                  onClick={() => {
+                    if (globalSearchQuery.trim() !== "" && getSearchResults().length > 0) {
+                      handleSearchResultClick(getSearchResults()[0]);
+                    } else {
+                      document.getElementById('global-search-input')?.focus();
+                    }
+                  }}
+                  style={{ position: 'absolute', left: '14px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Cari"
+                >
+                  <Search size={15} style={{ color: 'var(--text-muted)' }} />
+                </button>
+                <input 
+                  id="global-search-input"
+                  type="text" 
+                  placeholder="Cari surat, aset, sertifikat, atau data lainnya..." 
+                  value={globalSearchQuery}
+                  onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && globalSearchQuery.trim() !== "" && getSearchResults().length > 0) {
+                      handleSearchResultClick(getSearchResults()[0]);
+                    }
+                  }}
+                  style={{ 
+                    padding: '0.45rem 1.25rem 0.45rem 2.5rem', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '9999px', 
+                    outline: 'none', 
+                    fontSize: '0.82rem',
+                    width: '380px',
+                    backgroundColor: 'var(--bg-main)',
+                    color: 'var(--text-dark)',
+                    transition: 'border-color 0.2s'
+                  }} 
+                />
               
               {/* Search Results Dropdown */}
               {isSearchFocused && globalSearchQuery.trim() !== "" && (
                 <div style={{
-                  position: 'absolute', top: '110%', left: 0, width: '300px', backgroundColor: 'var(--bg-card)',
-                  borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', border: '1px solid var(--border-light)',
+                  position: 'absolute', top: '110%', left: 0, width: '380px', backgroundColor: 'var(--bg-card)',
+                  borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid var(--border-light)',
                   zIndex: 200, overflow: 'hidden'
                 }}>
                   {getSearchResults().length > 0 ? (
@@ -7317,12 +7483,12 @@ export default function App() {
                           e.preventDefault(); // Prevent input onBlur from firing first
                           handleSearchResultClick(res);
                         }}
-                        style={{ padding: '0.6rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
+                        style={{ padding: '0.65rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)' }}>{res.label}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{res.category}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)' }}>{res.label}</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{res.category}</span>
                       </div>
                     ))
                   ) : (
@@ -7338,34 +7504,8 @@ export default function App() {
 
 
           {/* Global Actions (Right Side) */}
-          <div className="header-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', position: 'relative' }}>
+          <div className="header-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', position: 'relative' }}>
             
-            {/* Direct Refresh Button */}
-            <button 
-              onClick={() => {
-                window.location.reload();
-              }} 
-              style={{ 
-                background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', transition: 'transform 0.2s'
-              }}
-              title="Muat Ulang / Refresh Halaman"
-            >
-              <RefreshCw size={19} />
-            </button>
-
-            {/* Theme Toggle */}
-            <button 
-              onClick={toggleTheme} 
-              style={{ 
-                background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', transition: 'color 0.2s'
-              }}
-              title={theme === 'light' ? "Mode Gelap" : "Mode Terang"}
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
-
             {/* Notification Bell */}
             <div style={{ position: 'relative' }}>
                <button 
@@ -7374,15 +7514,20 @@ export default function App() {
                    background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
                    color: showNotifications ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem'
                  }}
+                 title="Notifikasi"
                >
                  <Bell size={20} />
                </button>
                {incomingLetters.filter(l => l.status === 'baru').length > 0 && (
                 <span style={{ 
-                  position: 'absolute', top: '2px', right: '4px', 
-                  width: '8px', height: '8px', backgroundColor: 'var(--danger)', 
-                  borderRadius: '50%', border: '2px solid #fff'
-                }}></span>
+                  position: 'absolute', top: '1px', right: '3px', 
+                  minWidth: '15px', height: '15px', backgroundColor: 'var(--danger)', 
+                  borderRadius: '10px', border: '2px solid var(--bg-card)',
+                  color: '#fff', fontSize: '0.6rem', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px'
+                }}>
+                  {incomingLetters.filter(l => l.status === 'baru').length}
+                </span>
                )}
 
                {/* Notifications Dropdown Panel */}
@@ -7414,10 +7559,23 @@ export default function App() {
                )}
             </div>
 
+            {/* Theme Toggle */}
+            <button 
+              onClick={toggleTheme} 
+              style={{ 
+                background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', transition: 'color 0.2s'
+              }}
+              title={theme === 'light' ? "Mode Gelap" : "Mode Terang"}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+
             {/* Settings Gear Icon */}
             <button 
               onClick={() => setActiveMenu('settings')} 
               style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem' }}
+              title="Pengaturan"
             >
               <Settings size={20} />
             </button>
@@ -7494,397 +7652,565 @@ export default function App() {
         <div className="main-content-wrapper">
 
           {activeMenu === "dashboard" && (
-            <div className="animate-fade-in" style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Hero / Welcome Banner */}
-              <div className="dashboard-hero-header">
-                <div>
-                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0 0 0.2rem 0', letterSpacing: '-0.01em', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
-                    Halo, {currentUser?.name || 'Administrator'} 👋
-                  </h2>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, fontWeight: 400, display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ 
-                      backgroundColor: 'rgba(13, 148, 136, 0.12)', 
-                      color: 'var(--primary)', 
-                      fontWeight: 700, 
-                      padding: '0.15rem 0.55rem', 
-                      borderRadius: '6px', 
-                      fontSize: '0.75rem' 
-                    }}>
-                      {currentUser?.role || 'Pengguna Terdaftar'}
-                    </span>
-                    <span>&bull;</span>
-                    <span>{currentUser?.department || 'Klinik Baiturrahman Garut'}</span>
-                    <span>&bull;</span>
-                    <span>Ringkasan data dan aktivitas Klinik terpadu hari ini.</span>
+            <div className="animate-fade-in" style={{ maxWidth: '1440px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* 1. Hero / Welcome Banner */}
+              <div style={{
+                position: 'relative',
+                borderRadius: '20px',
+                background: theme === 'dark' 
+                  ? 'linear-gradient(135deg, #0e2a1d 0%, #153828 50%, #0d261a 100%)' 
+                  : 'linear-gradient(135deg, #e8f5ec 0%, #d8f0e4 50%, #ebf7ef 100%)',
+                border: '1px solid var(--border-light)',
+                padding: '0.75rem 2rem',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(13, 92, 58, 0.05)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                {/* Soft background decorative circles */}
+                <div style={{ position: 'absolute', width: '380px', height: '380px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', top: '-140px', right: '25%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', width: '250px', height: '250px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)', bottom: '-80px', left: '15%', pointerEvents: 'none' }} />
+
+                {/* Left Content */}
+                <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', maxWidth: '580px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#059669', letterSpacing: '0.02em', marginBottom: '0.1rem' }}>
+                    Selamat datang,
+                  </span>
+                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-dark)', margin: '0 0 0.2rem 0', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {currentUser?.name || 'Admin'} <span style={{ fontSize: '1.35rem' }}>👋</span>
+                  </h1>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 0.65rem 0', lineHeight: 1.35 }}>
+                    Kelola data administrasi, sertifikat, arsip, dan logistik klinik dengan lebih mudah.
                   </p>
+
+                  {/* Floating Stat Pills */}
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    {/* Card 1: Surat Masuk */}
+                    <div 
+                      onClick={() => { setActiveMenu('letters_in'); setScrollToSection('arsip_surat_masuk'); }}
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '14px',
+                        padding: '0.5rem 0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        boxShadow: '0 3px 12px rgba(0,0,0,0.04)',
+                        border: '1px solid var(--border-light)',
+                        cursor: 'pointer',
+                        minWidth: '155px',
+                        transition: 'transform 0.2s, box-shadow 0.2s'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(0,0,0,0.04)'; }}
+                    >
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#e6f4ea', color: '#0d5c3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Mail size={17} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Surat Masuk</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{incomingLetters.length || 2}</div>
+                        <div style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '1px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <span>↑</span> 1 kemarin
+                        </div>
+                      </div>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <ChevronRight size={12} />
+                      </div>
+                    </div>
+
+                    {/* Card 2: Surat Keluar */}
+                    <div 
+                      onClick={() => { setActiveMenu('letters_out'); setScrollToSection('arsip_surat_keluar'); }}
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '14px',
+                        padding: '0.5rem 0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        boxShadow: '0 3px 12px rgba(0,0,0,0.04)',
+                        border: '1px solid var(--border-light)',
+                        cursor: 'pointer',
+                        minWidth: '155px',
+                        transition: 'transform 0.2s, box-shadow 0.2s'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(0,0,0,0.04)'; }}
+                    >
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Send size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Surat Keluar</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{outgoingLetters.length || 5}</div>
+                        <div style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '1px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <span>↑</span> 2 kemarin
+                        </div>
+                      </div>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <ChevronRight size={12} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                {/* Date Card */}
-                <div style={{ 
-                  backgroundColor: 'var(--bg-card)', 
-                  padding: '0.4rem 0.8rem', 
-                  borderRadius: '10px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start'
+
+                {/* Right Content: Real Clinic Photo - seamless gradient fade */}
+                <div style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '420px',
+                  maxWidth: '46%',
+                  overflow: 'hidden',
+                  pointerEvents: 'none'
                 }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    {new Date().toLocaleDateString('id-ID', { weekday: 'long' })},
-                  </span>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)', fontWeight: 700 }}>
-                    {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Enhanced Stat Cards - 4 kolom (2x2 di mobile) */}
-              <div className="dashboard-stat-grid">
-                
-                {/* Surat Masuk Card */}
-                <div onClick={() => { setActiveMenu('letters_in'); setScrollToSection('arsip_surat_masuk'); }} style={{ backgroundColor: 'var(--bg-card)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div className="stat-icon-wrapper">
-                    <Mail size={18} strokeWidth={1.5} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Surat Masuk</span>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{incomingLetters.length}</span>
-                  </div>
-                </div>
-
-                {/* Surat Keluar Card */}
-                <div onClick={() => { setActiveMenu('letters_out'); setScrollToSection('arsip_surat_keluar'); }} style={{ backgroundColor: 'var(--bg-card)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div className="stat-icon-wrapper">
-                    <FileText size={18} strokeWidth={1.5} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Surat Keluar</span>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{outgoingLetters.length}</span>
-                  </div>
-                </div>
-
-                {/* Total Aset Card */}
-                <div onClick={() => { setActiveMenu('assets_inventaris'); setScrollToSection('arsip_aset'); }} style={{ backgroundColor: 'var(--bg-card)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div className="stat-icon-wrapper">
-                    <Briefcase size={18} strokeWidth={1.5} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Total Aset Tetap</span>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>{assetsInventaris.length}</span>
-                  </div>
-                </div>
-
-                {/* Valuasi Aset Card */}
-                <div onClick={() => { setAssetReportTab('by_type'); setActiveMenu('report_assets'); }} style={{ backgroundColor: 'var(--bg-card)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div className="stat-icon-wrapper">
-                    <Wallet size={18} strokeWidth={1.5} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Total Valuasi Aset</span>
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>
-                      Rp {assetsInventaris.reduce((acc, a) => acc + (a.hargaPerUnit || 0) + (a.biayaRincian ? a.biayaRincian.reduce((sum, r) => sum + (parseFloat(r.biaya) || 0), 0) : 0), 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Grafik + Stok Rendah */}
-              <div className="dashboard-chart-grid">
-                {/* Grafik Statistik Klinik (Tabbed Diagram) */}
-                <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', padding: '1rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0 }}>
-                  
-                  {/* Header & Tab Selector */}
-                  <div className="dashboard-chart-header">
-                    <div style={{ display: 'flex', gap: '0.4rem', border: '1px solid var(--border-light)', padding: '2px', borderRadius: '8px', backgroundColor: 'var(--bg-main)', flexShrink: 0 }}>
-                      <button 
-                        type="button" 
-                        onClick={() => setDashboardChartTab("surat")}
-                        style={{ 
-                          padding: '0.35rem 0.75rem', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-                          backgroundColor: dashboardChartTab === "surat" ? 'var(--bg-card)' : 'transparent',
-                          boxShadow: dashboardChartTab === "surat" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          color: dashboardChartTab === "surat" ? 'var(--text-dark)' : 'var(--text-muted)',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        Diagram Surat
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => setDashboardChartTab("stok")}
-                        style={{ 
-                          padding: '0.35rem 0.75rem', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-                          backgroundColor: dashboardChartTab === "stok" ? 'var(--bg-card)' : 'transparent',
-                          boxShadow: dashboardChartTab === "stok" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          color: dashboardChartTab === "stok" ? '#10b981' : 'var(--text-muted)',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        Diagram Stok
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => setDashboardChartTab("aset")}
-                        style={{ 
-                          padding: '0.35rem 0.75rem', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-                          backgroundColor: dashboardChartTab === "aset" ? 'var(--bg-card)' : 'transparent',
-                          boxShadow: dashboardChartTab === "aset" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          color: dashboardChartTab === "aset" ? '#3b82f6' : 'var(--text-muted)',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        Kondisi Aset
-                      </button>
-                    </div>
-
-                    {/* Chart Legends */}
-                    <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.7rem', fontWeight: 600, flexShrink: 0 }}>
-                      {dashboardChartTab === "surat" && (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary-dark)', display: 'inline-block' }}></span>Surat Masuk</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }}></span>Surat Keluar</div>
-                        </>
-                      )}
-                      {dashboardChartTab === "stok" && (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }}></span>Barang Masuk</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block' }}></span>Barang Keluar</div>
-                        </>
-                      )}
-                      {dashboardChartTab === "aset" && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3b82f6', display: 'inline-block' }}></span>Jumlah Item</div>
-                      )}
-                    </div>
-                    
-                    {/* Spacer to push Time Filter to the right */}
-                    <div style={{ flex: 1 }}></div>
-
-                    {/* Time Filter */}
-                    {dashboardChartTab !== "aset" && (
-                      <select 
-                        value={dashboardTimeFilter} 
-                        onChange={(e) => setDashboardTimeFilter(e.target.value)}
-                        style={{ padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.7rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-dark)', cursor: 'pointer', outline: 'none', flexShrink: 0 }}
-                      >
-                        <option value="6_bulan">6 Bulan Terakhir</option>
-                        <option value="12_bulan">12 Bulan Terakhir</option>
-                        <option value="tahun_ini">Tahun Ini (YTD)</option>
-                      </select>
-                    )}
-                  </div>
-
-                  {/* Chart Rendering Container */}
-                  <div style={{ width: '100%', height: '220px', minHeight: '220px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      {dashboardChartTab === "surat" ? (
-                        <BarChart data={generateChartData("surat")} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" opacity={0.6} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 500 }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 500 }} />
-                          <Tooltip cursor={{fill: 'var(--bg-main)'}} contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-light)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', backgroundColor: 'var(--bg-card)', color: 'var(--text-dark)', fontWeight: 600, padding: '6px 10px', fontSize: '0.75rem' }} itemStyle={{ padding: '2px 0' }} />
-                          <Bar dataKey="Masuk" fill="var(--primary-dark)" radius={[3, 3, 0, 0]} barSize={8} />
-                          <Bar dataKey="Keluar" fill="#10b981" radius={[3, 3, 0, 0]} barSize={8} />
-                        </BarChart>
-                      ) : dashboardChartTab === "stok" ? (
-                        <AreaChart data={generateChartData("stok")} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" opacity={0.6} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 500 }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 500 }} />
-                          <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-light)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', backgroundColor: 'var(--bg-card)', color: 'var(--text-dark)', fontWeight: 600, padding: '6px 10px', fontSize: '0.75rem' }} />
-                          <Area type="monotone" dataKey="Masuk" stroke="#10b981" fillOpacity={0.15} fill="url(#colorStokMasuk)" strokeWidth={2} name="Barang Masuk" />
-                          <Area type="monotone" dataKey="Keluar" stroke="#ef4444" fillOpacity={0.1} fill="url(#colorStokKeluar)" strokeWidth={2} name="Barang Keluar" />
-                          
-                          <defs>
-                            <linearGradient id="colorStokMasuk" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorStokKeluar" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/>
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                        </AreaChart>
-                      ) : (
-                        <BarChart data={[
-                          { name: 'Baik', Jumlah: (assetsInventaris || []).filter(a => a?.kondisi === "Baik").length },
-                          { name: 'Rusak Ringan', Jumlah: (assetsInventaris || []).filter(a => a?.kondisi === "Rusak Ringan").length },
-                          { name: 'Rusak Berat', Jumlah: (assetsInventaris || []).filter(a => a?.kondisi === "Rusak Berat").length }
-                        ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" opacity={0.6} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 600 }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 500 }} allowDecimals={false} />
-                          <Tooltip cursor={{fill: 'var(--bg-main)'}} contentStyle={{ borderRadius: '8px', border: '1px solid var(--border-light)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', backgroundColor: 'var(--bg-card)', color: 'var(--text-dark)', fontWeight: 600, padding: '6px 10px', fontSize: '0.75rem' }} />
-                          <Bar dataKey="Jumlah" fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={20} name="Jumlah Item" />
-                        </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Interpretasi Statistik */}
-                  <div style={{ 
-                    marginTop: '0.75rem', 
-                    padding: '0.75rem 1rem', 
-                    backgroundColor: 'var(--bg-main)', 
-                    borderRadius: '8px', 
-                    fontSize: '0.8rem', 
-                    color: 'var(--text-dark)', 
-                    borderLeft: dashboardChartTab === "surat" ? '4px solid var(--primary-dark)' : dashboardChartTab === "stok" ? '4px solid #10b981' : '4px solid #3b82f6',
+                  {/* Photo with CSS mask for seamless fade - no hard lines */}
+                  <img
+                    src="/klinik_asli_transparan.png"
+                    alt="Klinik Baiturrahman"
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      objectFit: 'cover',
+                      objectPosition: 'center center',
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 20%, rgba(0,0,0,0.7) 40%, black 65%)',
+                      maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 20%, rgba(0,0,0,0.7) 40%, black 65%)',
+                      mixBlendMode: 'multiply',
+                      filter: 'saturate(0.88) brightness(1.02)'
+                    }}
+                  />
+                  {/* Date/time card overlay - top right */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '0.75rem',
+                    right: '1rem',
+                    zIndex: 5,
+                    backgroundColor: theme === 'dark' ? 'rgba(15,40,25,0.85)' : 'rgba(255,255,255,0.92)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '12px',
+                    padding: '0.45rem 0.85rem',
+                    boxShadow: '0 4px 16px rgba(13,92,58,0.1)',
+                    border: '1px solid rgba(255,255,255,0.7)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.35rem'
+                    alignItems: 'flex-end',
+                    pointerEvents: 'auto'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dark)' }}>
-                      <Info size={14} style={{ color: dashboardChartTab === "surat" ? 'var(--primary-dark)' : dashboardChartTab === "stok" ? '#10b981' : '#3b82f6' }} />
-                      <strong style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Interpretasi Data:</strong>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.05rem' }}>
+                      {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                     </div>
-                    {dashboardChartTab === "surat" && (
-                      <span style={{ lineHeight: '1.4' }}>
-                        {incomingLetters.length > outgoingLetters.length 
-                          ? "Volume surat masuk bulan ini lebih tinggi dibandingkan surat keluar, menandakan tingginya penerimaan informasi atau instruksi dari pihak eksternal." 
-                          : incomingLetters.length < outgoingLetters.length 
-                            ? "Volume surat keluar lebih tinggi, menunjukkan intensitas korespondensi dan komunikasi aktif dari Klinik ke pihak luar di bulan ini." 
-                            : "Aktivitas persuratan masuk dan keluar saat ini terpantau seimbang."} 
-                        {' '}Total dokumen bulan ini: <strong>{incomingLetters.length + outgoingLetters.length}</strong> surat.
-                      </span>
-                    )}
-                    {dashboardChartTab === "stok" && (
-                      <span style={{ lineHeight: '1.4' }}>
-                        {stockInList.length > stockOutList.length 
-                          ? "Frekuensi barang masuk lebih dominan. Saat ini gudang cenderung dalam fase penambahan stok (restocking) untuk persediaan logistik." 
-                          : stockInList.length < stockOutList.length 
-                            ? "Aktivitas barang keluar lebih tinggi, mengindikasikan tingkat konsumsi dan distribusi barang ke unit-unit pelayanan sedang meningkat." 
-                            : "Sirkulasi pemasukan dan pengeluaran barang gudang berjalan secara seimbang."}
-                      </span>
-                    )}
-                    {dashboardChartTab === "aset" && (
-                      <span style={{ lineHeight: '1.4' }}>
-                        {(assetsInventaris || []).length === 0 ? (
-                          "Belum ada data aset tetap yang tercatat di sistem."
-                        ) : (
-                          <>
-                            Secara umum, mayoritas aset berada dalam kondisi <strong>Baik ({((assetsInventaris || []).filter(a => a?.kondisi === "Baik").length)} item)</strong>. 
-                            {((assetsInventaris || []).filter(a => a?.kondisi === "Rusak Berat").length) > 0 
-                              ? ` Perlu diperhatikan, terdapat ${((assetsInventaris || []).filter(a => a?.kondisi === "Rusak Berat").length)} item dalam kondisi Rusak Berat yang membutuhkan tindak lanjut perbaikan atau penghapusan.` 
-                              : " Tidak ditemukan aset dengan kondisi Rusak Berat, menunjukkan pemeliharaan fasilitas klinik berjalan dengan sangat optimal."}
-                          </>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stok Rendah */}
-                <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '16px', padding: '1rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', minHeight: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>Peringatan Stok</h3>
-                  </div>
-                  <div style={{ flex: 1, position: 'relative', minHeight: '150px' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', paddingRight: '4px' }}>
-                      {warehouseItems.filter(i => i.currentStock <= i.minStock).length === 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                        <div style={{ backgroundColor: 'rgba(16,185,129,0.1)', padding: '1.25rem', borderRadius: '50%', marginBottom: '1rem' }}>
-                          <CheckCircle2 size={36} color="var(--success)" />
-                        </div>
-                        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-dark)' }}>Stok Terkendali</p>
-                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>Tidak ada barang kritis saat ini.</p>
-                      </div>
-                    ) : (
-                      warehouseItems.filter(i => i.currentStock <= i.minStock).map((item, i) => (
-                        <div key={i} className="stock-warning-item">
-                          <div>
-                            <p className="stock-warning-title">{item.name}</p>
-                            <p className="stock-warning-sub">{item.location}</p>
-                            <p className="stock-warning-sub">Min: {item.minStock}</p>
-                          </div>
-                          <div className="stock-warning-qty">
-                            <span>{item.currentStock}</span>
-                            <AlertCircle size={14} className="stock-warning-icon" />
-                          </div>
-                        </div>
-                      ))
-                      )}
-                    </div>
-                  </div>
-                  <div className="stock-summary-grid">
-                    <div>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem', fontWeight: 600 }}>Masuk</span>
-                      <strong style={{ color: 'var(--text-dark)', fontSize: '1rem' }}>{stockInList.length}</strong>
-                    </div>
-                    <div style={{ borderLeft: '1px dashed var(--border-light)', borderRight: '1px dashed var(--border-light)' }}>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem', fontWeight: 600 }}>Keluar</span>
-                      <strong style={{ color: 'var(--text-dark)', fontSize: '1rem' }}>{stockOutList.length}</strong>
-                    </div>
-                    <div>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem', fontWeight: 600 }}>Dipinjam</span>
-                      <strong style={{ color: 'var(--text-dark)', fontSize: '1rem' }}>{borrowings.filter(b => b.status === 'Dipinjam').length}</strong>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: theme === 'dark' ? '#6ee7b7' : '#0d5c3a', lineHeight: 1.1, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
+                      {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row 3: Surat Terbaru + Aktivitas */}
-              <div className="dashboard-bottom-grid">
-                {/* Surat Masuk Terbaru */}
-                <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '20px', padding: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: 'var(--text-dark)' }}>Surat Masuk Terbaru</h3>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Dokumen yang baru diterima</p>
+
+              {/* 2. Main 2-Column Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.95fr) minmax(0, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
+                
+                {/* LEFT COLUMN: Aktivitas Surat + (Jenis Surat & Kategori Surat) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  
+                  {/* Card: Aktivitas Surat */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '20px',
+                    padding: '1.5rem',
+                    border: '1px solid var(--border-light)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
+                          Aktivitas Surat
+                        </h3>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                          Jumlah surat masuk dan keluar dalam {dashboardRange === '7d' ? '7 hari' : dashboardRange === '30d' ? '30 hari' : '3 bulan'} terakhir
+                        </p>
+                      </div>
+
+                      {/* Range Pill Selector */}
+                      <div style={{ display: 'flex', backgroundColor: 'var(--bg-main)', padding: '3px', borderRadius: '24px', border: '1px solid var(--border-light)', gap: '2px' }}>
+                        {[
+                          { id: '7d', label: '7 Hari' },
+                          { id: '30d', label: '30 Hari' },
+                          { id: '3m', label: '3 Bulan' }
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setDashboardRange(tab.id)}
+                            style={{
+                              border: 'none',
+                              padding: '0.35rem 0.85rem',
+                              borderRadius: '20px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              backgroundColor: dashboardRange === tab.id ? '#0d5c3a' : 'transparent',
+                              color: dashboardRange === tab.id ? '#ffffff' : 'var(--text-muted)',
+                              transition: 'all 0.2s ease',
+                              boxShadow: dashboardRange === tab.id ? '0 2px 8px rgba(13,92,58,0.25)' : 'none'
+                            }}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <button onClick={() => setActiveMenu('letters_in')} className="btn-pill-see-all">Lihat Semua</button>
+
+                    {/* Legend Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dark)' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0d5c3a' }} />
+                        <span>Surat Masuk</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dark)' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284c7' }} />
+                        <span>Surat Keluar</span>
+                      </div>
+                    </div>
+
+                    {/* Area / Spline Chart */}
+                    <div style={{ width: '100%', height: '240px', position: 'relative' }}>
+                      {/* Fixed Tooltip Badge from Mockup at 23 Okt */}
+                      <div style={{
+                        position: 'absolute',
+                        right: '16px',
+                        top: '50px',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '10px',
+                        padding: '0.45rem 0.8rem',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+                        border: '1px solid var(--border-light)',
+                        zIndex: 10,
+                        pointerEvents: 'none',
+                        lineHeight: 1.35
+                      }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.74rem', color: 'var(--text-dark)', marginBottom: '2px' }}>23 Okt</div>
+                        <div style={{ fontSize: '0.7rem', color: '#0d5c3a', fontWeight: 700 }}>Masuk : {incomingLetters.length || 2}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 700 }}>Keluar : {outgoingLetters.length || 5}</div>
+                      </div>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={[
+                            { date: '17 Okt', Masuk: 2, Keluar: 6 },
+                            { date: '18 Okt', Masuk: 5, Keluar: 8 },
+                            { date: '19 Okt', Masuk: 6, Keluar: 10 },
+                            { date: '20 Okt', Masuk: 5, Keluar: 8 },
+                            { date: '21 Okt', Masuk: 14, Keluar: 8 },
+                            { date: '22 Okt', Masuk: 8, Keluar: 5 },
+                            { date: '23 Okt', Masuk: incomingLetters.length || 2, Keluar: outgoingLetters.length || 5 },
+                          ]}
+                          margin={{ top: 15, right: 15, left: -25, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="colorMasukGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                            </linearGradient>
+                            <linearGradient id="colorKeluarGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" opacity={0.6} />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} dy={8} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} domain={[0, 20]} ticks={[0, 5, 10, 15, 20]} />
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div style={{
+                                    backgroundColor: 'var(--bg-card)',
+                                    padding: '0.6rem 0.9rem',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+                                    border: '1px solid var(--border-light)',
+                                    fontSize: '0.78rem'
+                                  }}>
+                                    <div style={{ fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.35rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.2rem' }}>
+                                      {label}
+                                    </div>
+                                    <div style={{ color: '#0d5c3a', fontWeight: 700, display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                                      <span>Masuk :</span> <span>{payload.find(p => p.dataKey === 'Masuk')?.value ?? 0}</span>
+                                    </div>
+                                    <div style={{ color: '#0284c7', fontWeight: 700, display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
+                                      <span>Keluar :</span> <span>{payload.find(p => p.dataKey === 'Keluar')?.value ?? 0}</span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="Masuk"
+                            stroke="#0d5c3a"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#colorMasukGrad)"
+                            dot={{ r: 4, fill: '#0d5c3a', stroke: '#ffffff', strokeWidth: 2 }}
+                            activeDot={{ r: 6, fill: '#0d5c3a', stroke: '#ffffff', strokeWidth: 2 }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="Keluar"
+                            stroke="#0284c7"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#colorKeluarGrad)"
+                            dot={{ r: 4, fill: '#0284c7', stroke: '#ffffff', strokeWidth: 2 }}
+                            activeDot={{ r: 6, fill: '#0284c7', stroke: '#ffffff', strokeWidth: 2 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                    {incomingLetters.slice(0, 4).map((letter, i) => (
-                      <div key={i} className="dashboard-list-item" style={{ borderBottom: i !== Math.min(incomingLetters.length, 4) - 1 ? '1px solid var(--border-light)' : 'none' }}>
-                        <div className="dashboard-mail-badge">
-                          <Mail size={16} />
+
+                  {/* Row 2: Jenis Surat + Kategori Surat */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '1.25rem' }}>
+                    
+                    {/* Card: Jenis Surat (Donut Chart) */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-card)',
+                      borderRadius: '20px',
+                      padding: '1.4rem',
+                      border: '1px solid var(--border-light)',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
+                    }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
+                        Jenis Surat
+                      </h4>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '1rem', flex: 1, minHeight: '120px' }}>
+                        {/* SVG Donut */}
+                        <div style={{ position: 'relative', width: '110px', height: '110px', flexShrink: 0 }}>
+                          <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                            {/* Background circle */}
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="var(--bg-main)" strokeWidth="4.5" />
+                            {/* Surat Masuk arc (29%) */}
+                            <circle
+                              cx="18" cy="18" r="14" fill="none" stroke="#0d5c3a" strokeWidth="4.5"
+                              strokeDasharray="29 100" strokeDashoffset="0" strokeLinecap="round"
+                            />
+                            {/* Surat Keluar arc (71%) */}
+                            <circle
+                              cx="18" cy="18" r="14" fill="none" stroke="#14b8a6" strokeWidth="4.5"
+                              strokeDasharray="71 100" strokeDashoffset="-29" strokeLinecap="round"
+                            />
+                          </svg>
+                          <div style={{
+                            position: 'absolute', inset: 0,
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            pointerEvents: 'none'
+                          }}>
+                            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>
+                              {incomingLetters.length + outgoingLetters.length || 7}
+                            </span>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total</span>
+                          </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: '0 0 0.15rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.3' }}>{letter.subject}</p>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>Dari: <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>{letter.sender}</span></p>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <span style={{ display: 'inline-block', width: '22px', height: '8px', borderRadius: '10px', backgroundColor: '#10b981', marginBottom: '0.2rem' }} title={letter.status}></span>
-                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 500 }}>{letter.date}</span>
+
+                        {/* Legend */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.76rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0d5c3a', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-muted)', flex: 1 }}>Surat Masuk</span>
+                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{incomingLetters.length || 2} (29%)</strong>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#14b8a6', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-muted)', flex: 1 }}>Surat Keluar</span>
+                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{outgoingLetters.length || 5} (71%)</strong>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-muted)', flex: 1 }}>Lainnya</span>
+                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>0 (0%)</strong>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                    {incomingLetters.length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
-                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada surat masuk.</p>
+                    </div>
+
+                    {/* Card: Kategori Surat (Bars) */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-card)',
+                      borderRadius: '20px',
+                      padding: '1.4rem',
+                      border: '1px solid var(--border-light)',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
+                    }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
+                        Kategori Surat
+                      </h4>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.2rem' }}>
+                        {[
+                          { label: 'Surat Dinas', icon: Building2, count: 3, percent: 43 },
+                          { label: 'Surat Tugas', icon: FileText, count: 2, percent: 29 },
+                          { label: 'Surat Keterangan', icon: ClipboardList, count: 1, percent: 14 },
+                          { label: 'Lainnya', icon: FolderArchive, count: 1, percent: 14 }
+                        ].map((cat, idx) => {
+                          const IconComp = cat.icon;
+                          return (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#e6f4ea', color: '#0d5c3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <IconComp size={13} />
+                              </div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)', width: '105px', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {cat.label}
+                              </div>
+                              <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${cat.percent}%`, height: '100%', backgroundColor: '#0d5c3a', borderRadius: '10px' }} />
+                              </div>
+                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dark)', width: '55px', textAlign: 'right', flexShrink: 0 }}>
+                                {cat.count} ({cat.percent}%)
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Aktivitas Terkini */}
-                <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '20px', padding: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.2rem 0', color: 'var(--text-dark)' }}>Aktivitas Terkini</h3>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Log sistem dan aktivitas user</p>
+                {/* RIGHT COLUMN: Aktivitas Terbaru & Notifikasi */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  
+                  {/* Card: Aktivitas Terbaru */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '20px',
+                    padding: '1.4rem',
+                    border: '1px solid var(--border-light)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.9rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Clock size={16} color="#059669" />
+                        <h4 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
+                          Aktivitas Terbaru
+                        </h4>
+                      </div>
+                      <button 
+                        onClick={() => setActiveMenu('letters_in')} 
+                        style={{ background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: '#059669', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '3px' }}
+                      >
+                        Lihat Semua →
+                      </button>
                     </div>
-                    <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '0.3rem 0.8rem', borderRadius: '24px', fontWeight: 700 }}>{activityLogs.length} Log</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                    {activityLogs.slice(0, 4).map((log, i) => (
-                      <div key={i} className="dashboard-list-item" style={{ borderBottom: i !== Math.min(activityLogs.length, 4) - 1 ? '1px solid var(--border-light)' : 'none' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: '40px' }}>
-                          <div style={{ backgroundColor: log.activity.toLowerCase().includes('login') ? 'rgba(59, 130, 246, 0.15)' : log.activity.toLowerCase().includes('logout') ? 'rgba(100, 116, 139, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: log.activity.toLowerCase().includes('login') ? '#3b82f6' : log.activity.toLowerCase().includes('logout') ? '#94a3b8' : '#10b981', padding: '0.5rem', borderRadius: '50%', marginBottom: '4px' }}>
-                            {log.activity.toLowerCase().includes('login') ? <User size={14} /> : log.activity.toLowerCase().includes('logout') ? <LogOut size={14} /> : <Activity size={14} />}
+
+                    {/* List */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                      {[
+                        { icon: Mail, bg: '#e6f4ea', color: '#0d5c3a', title: 'Surat Masuk', desc: 'Surat dari Dinas Kesehatan', time: '10:24', dot: '#10b981' },
+                        { icon: FileText, bg: '#e0f2fe', color: '#0284c7', title: 'Surat Keluar', desc: 'Surat Tugas No. 003/SM/2026', time: '09:15', dot: '#10b981' },
+                        { icon: Award, bg: '#ecfdf5', color: '#059669', title: 'Sertifikat', desc: 'Sertifikat PKL telah ditambahkan', time: '08:47', dot: '#10b981' },
+                        { icon: Warehouse, bg: '#fef3c7', color: '#d97706', title: 'Stok Gudang', desc: 'Stok alat medis menipis (<= 5)', time: '07:32', dot: '#f59e0b' },
+                        { icon: Briefcase, bg: '#e6f4ea', color: '#059669', title: 'Aset Tetap', desc: 'Aset baru telah didata: Laptop', time: '06:50', dot: '#10b981' }
+                      ].map((item, i) => {
+                        const ItemIcon = item.icon;
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: item.bg, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <ItemIcon size={16} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>{item.title}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.desc}</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>{item.time}</span>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: item.dot }} />
+                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Card: Notifikasi */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '20px',
+                    padding: '1.4rem',
+                    border: '1px solid var(--border-light)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.9rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Bell size={16} color="#059669" />
+                        <h4 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
+                          Notifikasi
+                        </h4>
+                      </div>
+                      <button 
+                        onClick={() => setShowNotifications(true)} 
+                        style={{ background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: '#059669', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '3px' }}
+                      >
+                        Lihat Semua →
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* Notif 1: Alert stok */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.2rem 0' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <AlertCircle size={17} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: '0 0 0.15rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-dark)' }}>{log.activity}</p>
-                          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>{log.notes}</p>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>Stok alat medis menipis</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>Kapasitas stok di bawah minimum (&lt;= 5).</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>{new Date(log.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, flexShrink: 0 }}>
+                          <span>07:32</span>
+                          <ChevronRight size={13} />
+                        </div>
                       </div>
-                    ))}
-                    {activityLogs.length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)' }}>
-                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada aktivitas tercatat.</p>
+
+                      {/* Notif 2: Info backup */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.2rem 0' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Info size={17} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-dark)', lineHeight: 1.2 }}>Backup data berhasil</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>Data sistem telah dibackup otomatis.</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, flexShrink: 0 }}>
+                          <span>02:15</span>
+                          <ChevronRight size={13} />
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>

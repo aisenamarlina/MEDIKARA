@@ -1,62 +1,74 @@
 [
   {
+    "time": "2026-10-23T07:17:23.099Z",
+    "notes": "No: 005/SOP/01-10.0/X/K-BTR/2026, Perihal: Standar Operasional Prosedur",
+    "module": "Persuratan",
+    "activity": "Membuat Surat Keluar"
+  },
+  {
+    "time": "2026-10-23T06:10:29.813Z",
+    "notes": "Pengguna [Admin - Administrator Sistem (IT)] berhasil masuk ke dashboard",
+    "module": "Autentikasi",
+    "activity": "Login Pengguna"
+  },
+  {
     "time": "2026-09-15T03:54:52.484Z",
-    "activity": "Edit Surat Keluar",
+    "notes": "Mengubah data surat keluar 003/SOP/01-10.0/IX/K-BTR/2026",
     "module": "Persuratan",
-    "notes": "Mengubah data surat keluar 003/SOP/01-10.0/IX/K-BTR/2026"
+    "activity": "Edit Surat Keluar"
   },
   {
-    "activity": "Membuat Surat Keluar",
-    "module": "Persuratan",
+    "time": "2026-09-15T03:30:57.285Z",
     "notes": "No: 012/SOP/01-10.0/X/K-BTR/2023, Perihal: Standar Operasional Prosedur",
-    "time": "2026-09-15T03:30:57.285Z"
+    "module": "Persuratan",
+    "activity": "Membuat Surat Keluar"
   },
   {
-    "activity": "Membuat Surat Keluar",
-    "module": "Persuratan",
+    "time": "2026-09-15T03:21:39.866Z",
     "notes": "No: 003/SOP/01-10.0/IX/K-BTR/2026, Perihal: Standar Operasional Prosedur",
-    "time": "2026-09-15T03:21:39.866Z"
+    "module": "Persuratan",
+    "activity": "Membuat Surat Keluar"
   },
   {
-    "activity": "Login Pengguna",
-    "module": "Autentikasi",
+    "time": "2026-09-13T14:33:48.146Z",
     "notes": "Pengguna [Admin - Manajemen Sistem Informasi] berhasil masuk ke dashboard",
-    "time": "2026-09-13T14:33:48.146Z"
-  },
-  {
-    "activity": "Logout Pengguna",
     "module": "Autentikasi",
+    "activity": "Login Pengguna"
+  },
+  {
+    "time": "2026-09-13T14:33:26.994Z",
     "notes": "Sesi login [Admin] diakhiri",
-    "time": "2026-09-13T14:33:26.994Z"
+    "module": "Autentikasi",
+    "activity": "Logout Pengguna"
   },
   {
-    "activity": "Hapus Arsip Digital",
-    "module": "Persuratan",
+    "time": "2026-09-13T14:23:09.238Z",
     "notes": "Dokumen ID: AR-2026-003 berhasil dihapus",
-    "time": "2026-09-13T14:23:09.238Z"
+    "module": "Persuratan",
+    "activity": "Hapus Arsip Digital"
   },
   {
-    "activity": "Hapus Arsip Digital",
-    "module": "Persuratan",
+    "time": "2026-09-13T14:23:06.107Z",
     "notes": "Dokumen ID: AR-2026-002 berhasil dihapus",
-    "time": "2026-09-13T14:23:06.107Z"
+    "module": "Persuratan",
+    "activity": "Hapus Arsip Digital"
   },
   {
-    "activity": "Hapus Arsip Digital",
-    "module": "Persuratan",
+    "time": "2026-09-13T14:23:02.357Z",
     "notes": "Dokumen ID: AR-2026-004 berhasil dihapus",
-    "time": "2026-09-13T14:23:02.357Z"
+    "module": "Persuratan",
+    "activity": "Hapus Arsip Digital"
   },
   {
-    "activity": "Hapus Arsip Digital",
-    "module": "Persuratan",
+    "time": "2026-09-13T14:22:58.432Z",
     "notes": "Dokumen ID: AR-2026-001 berhasil dihapus",
-    "time": "2026-09-13T14:22:58.432Z"
+    "module": "Persuratan",
+    "activity": "Hapus Arsip Digital"
   },
   {
-    "activity": "Hapus Arsip Digital",
-    "module": "Persuratan",
+    "time": "2026-09-13T14:22:55.250Z",
     "notes": "Dokumen ID: AR-2023-001 berhasil dihapus",
-    "time": "2026-09-13T14:22:55.250Z"
+    "module": "Persuratan",
+    "activity": "Hapus Arsip Digital"
   }
 ]
