@@ -3095,7 +3095,21 @@ export default function App() {
                           <div style={{ display: 'flex', alignItems: 'center' }}>
                             <span style={{ width: '110px' }}>Halaman</span>
                             <span>:&nbsp;&nbsp;</span>
-                            <span className="sop-halaman-val">{currentPrintDoc.sopData?.halaman || '1 dari 1'}</span>
+                            <span className="sop-halaman-val">
+                              {(() => {
+                                const sections = currentPrintDoc.sopData?.sections || [];
+                                let totalLines = 0;
+                                sections.forEach(s => {
+                                  (s.items || []).forEach(it => {
+                                    totalLines += Math.max(1, Math.ceil((it || '').length / 65));
+                                  });
+                                });
+                                if (currentPrintDoc.sopData?.baganAlirImage) totalLines += 12;
+                                if (currentPrintDoc.sopData?.rekamHistoris?.length) totalLines += currentPrintDoc.sopData.rekamHistoris.length * 2;
+                                const estPages = totalLines <= 20 ? 1 : Math.ceil((totalLines - 20) / 45) + 1;
+                                return `1 dari ${estPages}`;
+                              })()}
+                            </span>
                           </div>
                         </td>
                       </tr>
