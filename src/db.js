@@ -6,8 +6,6 @@
 
 import {
   defaultSettings,
-  defaultDirectorSignature,
-  defaultClinicStamp,
   defaultSequences,
   defaultOutgoingLetters,
   defaultCertificates,
@@ -273,16 +271,33 @@ const lsSet = (key, data, skipBroadcast = false) => {
 const pushToServer = async (key, data) => {
   try {
     const cleaned = cleanForStorageAndFirebase(data);
-    const res = await fetch(`/api/store/${key}`, {
+    // 1. Simpan via /api/store?key=...
+    const res = await fetch(`/api/store?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cleaned)
     });
     if (!res.ok) {
-      console.warn(`[MEDIKARA] pushToServer("${key}") returned HTTP status: ${res.status}`);
+      console.warn(`[MEDIKARA] pushToServer("${key}") via /api/store failed (${res.status}), trying fallback /api/bulk...`);
+      // 2. Fallback via /api/bulk yang terbukti berhasil di Vercel
+      await fetch('/api/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: cleaned })
+      });
     }
   } catch (err) {
-    // Mode offline / server backend sedang starting
+    console.warn(`[MEDIKARA] pushToServer("${key}") network error, trying /api/bulk fallback...`, err);
+    try {
+      const cleaned = cleanForStorageAndFirebase(data);
+      await fetch('/api/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: cleaned })
+      });
+    } catch (bulkErr) {
+      // Offline mode
+    }
   }
 };
 
@@ -295,8 +310,7 @@ const seedInitialDataIfEmpty = () => {
   const seedIfEmpty = (key, defaultData) => {
     const raw = localStorage.getItem(LS_PREFIX + key);
     if (raw === null || raw === undefined) {
-      lsSet(key, defaultData);
-      pushToServer(key, defaultData);
+      lsSet(key, defaultData, true); // Hanya cache lokal, JANGAN timpa database cloud!
     }
   };
 
@@ -332,16 +346,33 @@ const mergeCollections = (key, localData, cloudData) => {
   if (localArray.length === 0) return cloudArray;
   if (cloudArray.length === 0) return localArray;
 
-  // Gabungkan berdasarkan unique ID
   const map = new Map();
-  cloudArray.forEach(item => {
-    if (item && item.id) map.set(item.id, item);
-    else if (item && item.docNo) map.set(item.docNo, item);
-  });
-  localArray.forEach(item => {
-    if (item && item.id) map.set(item.id, item);
-    else if (item && item.docNo) map.set(item.docNo, item);
-  });
+  const getTs = (item) => {
+    if (!item) return 0;
+    const t = item.updatedAt || item.createdAt || item.date || 0;
+    const num = new Date(t).getTime();
+    return isNaN(num) ? 0 : num;
+  };
+
+  const addItem = (item) => {
+    if (!item) return;
+    const id = item.id || item.docNo || item.refNo || item.itemCode;
+    if (!id) return;
+    const existing = map.get(id);
+    if (!existing) {
+      map.set(id, item);
+    } else {
+      if (getTs(item) >= getTs(existing)) {
+        map.set(id, { ...existing, ...item });
+      } else {
+        map.set(id, { ...item, ...existing });
+      }
+    }
+  };
+
+  // Iterasi cloud dulu, lalu local
+  cloudArray.forEach(addItem);
+  localArray.forEach(addItem);
 
   return Array.from(map.values());
 };
@@ -359,14 +390,11 @@ export const initDB = async () => {
             const localSettings = lsGet('settings', defaultSettings);
             const isLocalCustomSig = localSettings.signature && localSettings.signature !== defaultDirectorSignature;
             const isServerCustomSig = v.signature && v.signature !== defaultDirectorSignature;
-            // Server custom signature takes priority (it was uploaded by another device)
-            // If server has no custom, use local custom, otherwise use default
-            const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : defaultDirectorSignature);
+            const finalSignature = isServerCustomSig ? v.signature : (isLocalCustomSig ? localSettings.signature : (v.signature || defaultDirectorSignature));
 
             const isLocalCustomStamp = localSettings.stamp && localSettings.stamp !== defaultClinicStamp;
             const isServerCustomStamp = v.stamp && v.stamp !== defaultClinicStamp;
-            // Same priority: server > local > default
-            const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : defaultClinicStamp);
+            const finalStamp = isServerCustomStamp ? v.stamp : (isLocalCustomStamp ? localSettings.stamp : (v.stamp || defaultClinicStamp));
 
             const isLocalCustomLogo = localSettings.logo && localSettings.logo !== defaultSettings.logo && localSettings.logo !== '/logo.png';
             const isServerCustomLogo = v.logo && v.logo !== defaultSettings.logo && v.logo !== '/logo.png';
@@ -374,24 +402,23 @@ export const initDB = async () => {
 
             const mergedSettings = {
               ...defaultSettings,
-              ...v,           // server settings first (has latest saved data)
-              ...localSettings, // then local (may have unsent changes)
+              ...localSettings,
+              ...v,
               signature: finalSignature,
               stamp: finalStamp,
               logo: finalLogo
             };
             lsSet('settings', mergedSettings, true);
-            // Jika lokal memiliki TTD/Cap kustom yang belum tersimpan di server, push ke server
-            if ((isLocalCustomSig && !isServerCustomSig) || (isLocalCustomStamp && !isServerCustomStamp) || (isLocalCustomLogo && !isServerCustomLogo)) {
-              console.log('[MEDIKARA] Menyinkronkan TTD/Cap kustom lokal ke server...');
+            // Jika lokal memiliki TTD/Cap kustom yang belum ada di server, dorong ke server
+            if (isLocalCustomSig || isLocalCustomStamp || isLocalCustomLogo) {
               pushToServer('settings', mergedSettings);
             }
           } else if (ARRAY_COLLECTIONS.has(k)) {
             const localData = lsGet(k, []);
             const merged = mergeCollections(k, localData, v);
             lsSet(k, merged, true);
-            // Jika data lokal memiliki entri baru yang belum ada di server, sinkronkan ke server
-            if (Array.isArray(localData) && Array.isArray(v) && localData.length > v.length) {
+            // Jika data lokal memiliki entri baru atau revisi yang berbeda dari server, sinkronkan ke server
+            if (Array.isArray(localData) && Array.isArray(v) && (localData.length > v.length || merged.length > v.length)) {
               pushToServer(k, merged);
             }
           } else {
