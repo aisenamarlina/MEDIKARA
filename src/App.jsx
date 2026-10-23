@@ -3127,7 +3127,7 @@ export default function App() {
                         </td>
                       </tr>
 
-                      {/* Dynamic Sections Loop - Tiap langkah/baris dirender sebagai baris tabel terpisah agar bisa mengalir antar halaman tanpa ngegantung */}
+                      {/* Dynamic Sections Loop - Satu baris utuh rapi per bagian tanpa pembagi garis horizontal atau teks lanjutan berulang (Sesuai Tampilan Resmi) */}
                       {(currentPrintDoc.sopData?.sections || [
                         { title: "Pengertian", items: [currentPrintDoc.sopData?.pengertian || ""] },
                         { title: "Tujuan", items: [currentPrintDoc.sopData?.tujuan || ""] },
@@ -3137,41 +3137,24 @@ export default function App() {
                         { title: "Hal-Hal yang Perlu Diperhatikan", items: [currentPrintDoc.sopData?.halDiperhatikan || ""] },
                         { title: "Unit Terkait", items: [currentPrintDoc.sopData?.unitTerkait || ""] },
                         { title: "Dokumen Terkait", items: [currentPrintDoc.sopData?.dokumenTerkait || ""] }
-                      ]).flatMap((section, idx) => {
-                        if (!section.title && (!section.items || section.items.join('').trim() === '')) return [];
-                        const validItems = (section.items && section.items.length > 0) ? section.items : [""];
+                      ]).map((section, idx) => {
+                        if (!section.title && (!section.items || section.items.join('').trim() === '')) return null;
                         
-                        return validItems.map((item, iIdx) => {
-                          const isFirst = iIdx === 0;
-                          const isLast = iIdx === validItems.length - 1;
-
-                          return (
-                            <tr key={`${idx}-${iIdx}`} className="pdf-atomic sop-atomic-row">
-                              <td style={{ 
-                                border: '0.5px solid #000000', 
-                                borderTop: isFirst ? '0.5px solid #000000' : 'none',
-                                borderBottom: isLast ? '0.5px solid #000000' : 'none',
-                                padding: isFirst ? '0.45rem 0.65rem' : '0.2rem 0.65rem', 
-                                verticalAlign: 'top', 
-                                fontWeight: isFirst ? 'bold' : 'normal', 
-                                fontSize: isFirst ? '10pt' : '8.5pt', 
-                                color: isFirst ? '#000' : '#4b5563' 
-                              }}>
-                                {isFirst ? (
-                                  `${idx + 1}.  ${section.title}`
-                                ) : (
-                                  <span style={{ fontStyle: 'italic', opacity: 0.8 }}>({section.title} lanj.)</span>
-                                )}
-                              </td>
-                              <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'justify', fontSize: '10pt', color: '#000' }}>
-                                <div className="sop-item-step" style={{ display: 'flex', gap: '0.45rem', alignItems: 'flex-start' }}>
-                                  {validItems.length > 1 && <span style={{ minWidth: '18px', fontWeight: 'bold' }}>{iIdx + 1}.</span>}
+                        return (
+                          <tr key={idx} className="pdf-atomic">
+                            <td style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', verticalAlign: 'top', fontWeight: 'bold', fontSize: '10pt', color: '#000' }}>
+                              {idx + 1}.&nbsp;&nbsp;{section.title}
+                            </td>
+                            <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'justify', fontSize: '10pt', color: '#000' }}>
+                              {section.items.map((item, iIdx) => (
+                                <div key={iIdx} style={{ display: 'flex', gap: '0.45rem', marginBottom: section.items.length > 1 ? '0.35rem' : '0', alignItems: 'flex-start' }}>
+                                  {section.items.length > 1 && <span style={{ minWidth: '18px', fontWeight: 'normal' }}>{iIdx + 1}.</span>}
                                   <span style={{ flex: 1, whiteSpace: 'pre-line', textAlign: 'justify' }}>{item}</span>
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        });
+                              ))}
+                            </td>
+                          </tr>
+                        );
                       })}
 
                       {/* Bagan Alir (Image) */}
