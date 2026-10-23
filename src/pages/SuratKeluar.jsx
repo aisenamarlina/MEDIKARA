@@ -1574,9 +1574,9 @@ const SuratKeluar = ({
                       const file = e.target.files?.[0];
                       if (file) {
                         try {
-                          const compressed = await compressImage(file, 800, 800, 0.8);
+                          const compressed = await compressImage(file, 1200, 1200, 0.85);
                           if (compressed) {
-                            setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: compressed } }));
+                            setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: compressed, baganAlirWidth: prev.sopData?.baganAlirWidth || 80 } }));
                           }
                         } catch (err) {
                           console.error('Compress flowchart error:', err);
@@ -1584,10 +1584,37 @@ const SuratKeluar = ({
                       }
                     }} style={{ padding: '0.4rem', cursor: 'pointer' }} />
                     {letterForm.sopData?.baganAlirImage && (
-                      <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
-                        <img src={letterForm.sopData.baganAlirImage} alt="Preview Bagan Alir" style={{ maxWidth: '200px', maxHeight: '200px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
-                        <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: null } }))}
-                          style={{ position: 'absolute', top: '-8px', right: '-8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '10px', cursor: 'pointer' }}>✕</button>
+                      <div style={{ marginTop: '0.75rem' }}>
+                        {/* Slider ukuran gambar */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-dark)', whiteSpace: 'nowrap' }}>📐 Ukuran:</span>
+                          <input
+                            type="range"
+                            min="20"
+                            max="100"
+                            step="5"
+                            value={letterForm.sopData?.baganAlirWidth || 80}
+                            onChange={e => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirWidth: Number(e.target.value) } }))}
+                            style={{ flex: 1, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                          />
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', minWidth: '38px', textAlign: 'right' }}>{letterForm.sopData?.baganAlirWidth || 80}%</span>
+                          <button
+                            type="button"
+                            onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirWidth: 80 } }))}
+                            style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}
+                          >Reset</button>
+                        </div>
+                        {/* Preview */}
+                        <div style={{ position: 'relative', display: 'inline-block', width: '100%', textAlign: 'center' }}>
+                          <img
+                            src={letterForm.sopData.baganAlirImage}
+                            alt="Preview Bagan Alir"
+                            style={{ width: `${letterForm.sopData?.baganAlirWidth || 80}%`, maxWidth: '100%', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'block', margin: '0 auto' }}
+                          />
+                          <button type="button" onClick={() => setLetterForm(prev => ({ ...prev, sopData: { ...prev.sopData, baganAlirImage: null } }))}
+                            style={{ position: 'absolute', top: '-8px', right: '0', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                        </div>
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center' }}>Geser slider untuk mengatur lebar gambar saat dicetak</p>
                       </div>
                     )}
                   </div>

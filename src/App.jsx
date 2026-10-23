@@ -3206,7 +3206,7 @@ export default function App() {
                         </td>
                         <td colSpan="3" style={{ border: '0.5px solid #000000', padding: '0.45rem 0.65rem', textAlign: 'center' }}>
                           {currentPrintDoc.sopData?.baganAlirImage ? (
-                            <img src={currentPrintDoc.sopData.baganAlirImage} width="500" alt="Bagan Alir" style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain' }} />
+                            <img src={currentPrintDoc.sopData.baganAlirImage} alt="Bagan Alir" style={{ width: `${currentPrintDoc.sopData?.baganAlirWidth || 80}%`, maxWidth: '100%', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                           ) : (
                             <span style={{ color: '#888', fontStyle: 'italic', fontSize: '9pt' }}>(Bagan Alir)</span>
                           )}
