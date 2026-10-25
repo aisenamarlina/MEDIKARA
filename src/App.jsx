@@ -343,47 +343,54 @@ const renderFormattedContent = (content) => {
 export default function App() {
   // Splash screen state
   const [showSplash, setShowSplash] = useState(true);
-  // Authentication states
+  // Authentication states - Session-only (resets when browser is closed or laptop turned off)
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("kbr_session") === "true";
+    try {
+      localStorage.removeItem("kbr_session");
+      localStorage.removeItem("kbr_session_user");
+      localStorage.removeItem("kbr_session_user_data");
+    } catch (e) {}
+    return sessionStorage.getItem("kbr_session") === "true";
   });
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const savedUserJson = localStorage.getItem("kbr_session_user_data");
-      const savedUsername = (localStorage.getItem("kbr_session_user") || "").toLowerCase();
+      const isSessionActive = sessionStorage.getItem("kbr_session") === "true";
+      if (!isSessionActive) {
+        return null;
+      }
+      const savedUserJson = sessionStorage.getItem("kbr_session_user_data");
+      const savedUsername = (sessionStorage.getItem("kbr_session_user") || "").toLowerCase();
       
       let parsed = null;
       if (savedUserJson) {
         try { parsed = JSON.parse(savedUserJson); } catch (e) {}
       }
 
-      if (!parsed || parsed.username === "direktur" || savedUsername === "direktur" || (parsed && parsed.username === "admin") || savedUsername === "admin") {
-        const users = db.get("users") || defaultUsers;
-        const savedAdmin = users.find(u => u.username && u.username.toLowerCase() === "admin") || defaultUsers[0];
-        const adminUser = {
-          id: "usr-001",
-          username: "admin",
-          password: parsed?.password || savedAdmin?.password || "admin",
-          name: "Admin",
-          role: "Administrator",
-          department: "Unit IT",
-          email: "kbaiturrahmangarut@gmail.com",
-          avatarColor: "#0d9488"
-        };
-        localStorage.setItem("kbr_session", "true");
-        localStorage.setItem("kbr_session_user", "admin");
-        localStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
-        return adminUser;
+      if (parsed) {
+        if (parsed.username === "direktur") {
+          return {
+            id: "usr-001",
+            username: "admin",
+            password: "admin",
+            name: "Admin",
+            role: "Administrator",
+            department: "Unit IT",
+            email: "kbaiturrahmangarut@gmail.com",
+            avatarColor: "#0d9488"
+          };
+        }
+        return parsed;
       }
 
-      if (parsed) return parsed;
-      const users = db.get("users") || defaultUsers;
-      const found = users.find(u => u.username && u.username.toLowerCase() === savedUsername);
-      if (found) return found;
+      if (savedUsername) {
+        const users = db.get("users") || defaultUsers;
+        const found = users.find(u => u.username && u.username.toLowerCase() === savedUsername);
+        if (found) return found;
+      }
     } catch (e) {
       console.warn("User session load error:", e);
     }
-    return defaultUsers[0];
+    return null;
   });
 
   useEffect(() => {
@@ -401,9 +408,9 @@ export default function App() {
         avatarColor: "#0d9488"
       };
       setCurrentUser(adminUser);
-      localStorage.setItem("kbr_session", "true");
-      localStorage.setItem("kbr_session_user", "admin");
-      localStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
+      sessionStorage.setItem("kbr_session", "true");
+      sessionStorage.setItem("kbr_session_user", "admin");
+      sessionStorage.setItem("kbr_session_user_data", JSON.stringify(adminUser));
     }
   }, [currentUser]);
   const [username, setUsername] = useState("");
@@ -640,7 +647,7 @@ export default function App() {
         return; // Batal simpan
       }
       
-      const sessionUsername = (currentUser?.username || localStorage.getItem("kbr_session_user") || "admin").toLowerCase();
+      const sessionUsername = (currentUser?.username || sessionStorage.getItem("kbr_session_user") || "admin").toLowerCase();
       const users = db.get("users") || defaultUsers;
       const userIndex = users.findIndex(u => u.username && u.username.toLowerCase() === sessionUsername);
       
@@ -672,7 +679,7 @@ export default function App() {
       if (currentUser) {
         const updatedCurrent = { ...currentUser, password: newSettings.newPassword };
         setCurrentUser(updatedCurrent);
-        localStorage.setItem("kbr_session_user_data", JSON.stringify(updatedCurrent));
+        sessionStorage.setItem("kbr_session_user_data", JSON.stringify(updatedCurrent));
       }
 
       db.addLog("Ubah Kata Sandi", "Keamanan", `Kata sandi akun [${sessionUsername}] berhasil diperbarui`);
@@ -1576,9 +1583,14 @@ export default function App() {
       }
       setIsLoggedIn(true);
       setCurrentUser(loggedUser);
-      localStorage.setItem("kbr_session", "true");
-      localStorage.setItem("kbr_session_user", loggedUser.username);
-      localStorage.setItem("kbr_session_user_data", JSON.stringify(loggedUser));
+      sessionStorage.setItem("kbr_session", "true");
+      sessionStorage.setItem("kbr_session_user", loggedUser.username);
+      sessionStorage.setItem("kbr_session_user_data", JSON.stringify(loggedUser));
+      try {
+        localStorage.removeItem("kbr_session");
+        localStorage.removeItem("kbr_session_user");
+        localStorage.removeItem("kbr_session_user_data");
+      } catch (e) {}
 
       // Refresh semua state dari localStorage saat login ulang
       setSettings(db.get("settings"));
@@ -1609,8 +1621,15 @@ export default function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    localStorage.removeItem("kbr_session");
-    localStorage.removeItem("kbr_session_user_data");
+    setCurrentUser(null);
+    sessionStorage.removeItem("kbr_session");
+    sessionStorage.removeItem("kbr_session_user");
+    sessionStorage.removeItem("kbr_session_user_data");
+    try {
+      localStorage.removeItem("kbr_session");
+      localStorage.removeItem("kbr_session_user");
+      localStorage.removeItem("kbr_session_user_data");
+    } catch (e) {}
     db.addLog("Logout Pengguna", "Autentikasi", `Sesi login [${currentUser?.name || 'Pengguna'}] diakhiri`);
     setActivityLogs(db.get("activity_logs"));
   };
