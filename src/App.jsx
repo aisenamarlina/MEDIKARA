@@ -423,6 +423,7 @@ export default function App() {
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showSuratNavPopup, setShowSuratNavPopup] = useState(false);
 
   // Scroll-to-arsip state & refs
   const [scrollToSection, setScrollToSection] = useState(null);
@@ -8944,8 +8945,91 @@ export default function App() {
 
           {/* 5. Incoming Letters */}
           {activeMenu === "letters_in" && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                
+              {/* Persuratan Tab Switcher (Surat Masuk vs Surat Keluar) */}
+              <div className="persuratan-top-switcher" style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: 'var(--bg-card)',
+                padding: '6px',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+                gap: '8px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu('letters_in')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    fontFamily: 'Outfit, sans-serif',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: '#0d5c3a',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(13, 92, 58, 0.25)'
+                  }}
+                >
+                  <Inbox size={18} style={{ color: '#ffffff' }} />
+                  <span>Surat Masuk</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    color: '#ffffff',
+                    fontWeight: 700
+                  }}>
+                    {incomingLetters.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu('letters_out')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    fontFamily: 'Outfit, sans-serif',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-muted)'
+                  }}
+                >
+                  <Send size={18} style={{ color: '#0284c7' }} />
+                  <span>Surat Keluar</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    backgroundColor: 'var(--bg-main)',
+                    color: 'var(--text-dark)',
+                    fontWeight: 700
+                  }}>
+                    {outgoingLetters.length}
+                  </span>
+                </button>
+              </div>
+
               {/* Card Cetak Laporan Bulanan Persuratan */}
               <div className="laporan-persuratan-card">
                 <div className="laporan-persuratan-header">
@@ -9187,8 +9271,91 @@ export default function App() {
 
           {/* 6. Outgoing Letters Generator */}
           {activeMenu === "letters_out" && (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                
+              {/* Persuratan Tab Switcher (Surat Masuk vs Surat Keluar) */}
+              <div className="persuratan-top-switcher" style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: 'var(--bg-card)',
+                padding: '6px',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+                gap: '8px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu('letters_in')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    fontFamily: 'Outfit, sans-serif',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-muted)'
+                  }}
+                >
+                  <Inbox size={18} style={{ color: '#059669' }} />
+                  <span>Surat Masuk</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    backgroundColor: 'var(--bg-main)',
+                    color: 'var(--text-dark)',
+                    fontWeight: 700
+                  }}>
+                    {incomingLetters.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu('letters_out')}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    fontFamily: 'Outfit, sans-serif',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: '#0d5c3a',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(13, 92, 58, 0.25)'
+                  }}
+                >
+                  <Send size={18} style={{ color: '#ffffff' }} />
+                  <span>Surat Keluar</span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    color: '#ffffff',
+                    fontWeight: 700
+                  }}>
+                    {outgoingLetters.length}
+                  </span>
+                </button>
+              </div>
+
             <SuratKeluar 
               letterForm={letterForm}
               setLetterForm={setLetterForm}
@@ -11285,11 +11452,168 @@ export default function App() {
         </div>
       )}
 
+      {/* Quick Selector Popover for Surat */}
+      {showSuratNavPopup && (
+        <>
+          {/* Backdrop click to dismiss */}
+          <div 
+            onClick={() => setShowSuratNavPopup(false)} 
+            style={{ position: 'fixed', inset: 0, zIndex: 1001, background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(2px)' }} 
+          />
+          
+          <div style={{
+            position: 'fixed',
+            bottom: 'calc(68px + env(safe-area-inset-bottom, 16px))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '340px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '20px',
+            padding: '0.85rem',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.22), 0 2px 10px rgba(0,0,0,0.06)',
+            border: '1px solid var(--border-light)',
+            zIndex: 1002,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+            animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '0.2rem 0.4rem 0.5rem',
+              borderBottom: '1px solid var(--border-light)'
+            }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-dark)', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'Outfit, sans-serif' }}>
+                Pilih Menu Persuratan
+              </span>
+              <button 
+                type="button"
+                onClick={() => setShowSuratNavPopup(false)}
+                style={{ background: 'none', border: 'none', padding: '3px', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Option 1: Surat Masuk */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMenu("letters_in");
+                setShowSuratNavPopup(false);
+                setIsMobileMenuOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.75rem 0.85rem',
+                borderRadius: '14px',
+                border: activeMenu === 'letters_in' ? '1.5px solid #059669' : '1px solid var(--border-light)',
+                backgroundColor: activeMenu === 'letters_in' ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-main)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                backgroundColor: '#e6f4ea',
+                color: '#0d5c3a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Inbox size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+                  Surat Masuk
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Kelola, catat & arsip surat masuk
+                </div>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: '20px',
+                backgroundColor: activeMenu === 'letters_in' ? '#059669' : 'rgba(0,0,0,0.06)',
+                color: activeMenu === 'letters_in' ? '#ffffff' : 'var(--text-dark)'
+              }}>
+                {incomingLetters.length}
+              </span>
+            </button>
+
+            {/* Option 2: Surat Keluar */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMenu("letters_out");
+                setShowSuratNavPopup(false);
+                setIsMobileMenuOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.75rem 0.85rem',
+                borderRadius: '14px',
+                border: activeMenu === 'letters_out' ? '1.5px solid #0284c7' : '1px solid var(--border-light)',
+                backgroundColor: activeMenu === 'letters_out' ? 'rgba(2, 132, 199, 0.12)' : 'var(--bg-main)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                backgroundColor: '#e0f2fe',
+                color: '#0284c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Send size={19} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-dark)' }}>
+                  Surat Keluar
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Buat nomor, template & cetak surat
+                </div>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: '20px',
+                backgroundColor: activeMenu === 'letters_out' ? '#0284c7' : 'rgba(0,0,0,0.06)',
+                color: activeMenu === 'letters_out' ? '#ffffff' : 'var(--text-dark)'
+              }}>
+                {outgoingLetters.length}
+              </span>
+            </button>
+          </div>
+        </>
+      )}
+
       {/* Mobile Bottom Navigation Bar (Sidebar transforms to icons at bottom on mobile) */}
       <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah">
         <button
           type="button"
-          onClick={() => { setActiveMenu("dashboard"); setIsMobileMenuOpen(false); }}
+          onClick={() => { setActiveMenu("dashboard"); setShowSuratNavPopup(false); setIsMobileMenuOpen(false); }}
           className={`mobile-bottom-nav-item ${activeMenu === "dashboard" ? "active" : ""}`}
         >
           <div className="mobile-bottom-nav-icon">
@@ -11301,24 +11625,21 @@ export default function App() {
         <button
           type="button"
           onClick={() => { 
-            if (activeMenu === 'letters_in') {
-              setActiveMenu('letters_out');
-            } else {
-              setActiveMenu('letters_in');
-            }
-            setIsMobileMenuOpen(false); 
+            setShowSuratNavPopup(!showSuratNavPopup);
           }}
-          className={`mobile-bottom-nav-item ${['letters_in', 'letters_out'].includes(activeMenu) ? "active" : ""}`}
+          className={`mobile-bottom-nav-item ${['letters_in', 'letters_out'].includes(activeMenu) || showSuratNavPopup ? "active" : ""}`}
         >
           <div className="mobile-bottom-nav-icon">
             <Mail size={20} />
           </div>
-          <span className="mobile-bottom-nav-label">Surat</span>
+          <span className="mobile-bottom-nav-label">
+            {activeMenu === 'letters_out' ? 'S. Keluar' : activeMenu === 'letters_in' ? 'S. Masuk' : 'Surat'}
+          </span>
         </button>
 
         <button
           type="button"
-          onClick={() => { setActiveMenu("certificates"); setIsMobileMenuOpen(false); }}
+          onClick={() => { setActiveMenu("certificates"); setShowSuratNavPopup(false); setIsMobileMenuOpen(false); }}
           className={`mobile-bottom-nav-item ${activeMenu === "certificates" ? "active" : ""}`}
         >
           <div className="mobile-bottom-nav-icon">
@@ -11329,7 +11650,7 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => { setActiveMenu("archive"); setIsMobileMenuOpen(false); }}
+          onClick={() => { setActiveMenu("archive"); setShowSuratNavPopup(false); setIsMobileMenuOpen(false); }}
           className={`mobile-bottom-nav-item ${activeMenu === "archive" ? "active" : ""}`}
         >
           <div className="mobile-bottom-nav-icon">
@@ -11340,7 +11661,7 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onClick={() => { setIsMobileMenuOpen(!isMobileMenuOpen); setShowSuratNavPopup(false); }}
           className={`mobile-bottom-nav-item ${isMobileMenuOpen || ['reports', 'report_letters', 'report_assets', 'settings'].includes(activeMenu) ? "active" : ""}`}
         >
           <div className="mobile-bottom-nav-icon">
