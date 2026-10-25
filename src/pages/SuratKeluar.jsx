@@ -219,7 +219,7 @@ export const LampiranEditor = ({ lampiran = [], onChange }) => {
   const handleImageFileChange = async (bIdx, imgIdx, file) => {
     if (!file) return;
     try {
-      const compressed = await compressImage(file, 900, 900, 0.85);
+      const compressed = await compressImage(file, 800, 800, 0.78);
       handleUpdateImage(bIdx, imgIdx, 'url', compressed);
     } catch (err) {
       console.error("Gagal mengompres gambar:", err);

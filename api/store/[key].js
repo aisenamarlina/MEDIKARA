@@ -28,7 +28,7 @@ export const config = {
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -68,6 +68,15 @@ export default async function handler(req, res) {
         [key, JSON.stringify(payload)]
       );
       return res.status(200).json({ ok: true, key });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    try {
+      await p.query('DELETE FROM app_storage WHERE key = $1', [key]);
+      return res.status(200).json({ ok: true, deleted: key });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

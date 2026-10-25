@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await p.query('SELECT key, data FROM app_storage');
+    const result = await p.query("SELECT key, data FROM app_storage WHERE key NOT LIKE 'file_%' AND key NOT LIKE 'file:%'");
     const map = {};
     for (const row of result.rows) {
       map[row.key] = row.data;

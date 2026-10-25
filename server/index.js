@@ -130,9 +130,10 @@ app.get('/api/all', async (req, res) => {
   }
 });
 
-// GET satu key
-app.get('/api/store/:key', async (req, res) => {
-  const { key } = req.params;
+// Handler GET/POST/DELETE satu key (bisa via /api/store?key=... atau /api/store/:key)
+const handleStoreGet = async (req, res) => {
+  const key = req.params.key || req.query.key || req.query.k;
+  if (!key) return res.status(400).json({ error: 'Missing key parameter' });
   try {
     if (isPgConnected()) {
       const pgData = await getStoreFromPg(key);
@@ -147,11 +148,11 @@ app.get('/api/store/:key', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-// POST simpan satu key (simpan ke PostgreSQL + backup ke local file)
-app.post('/api/store/:key', async (req, res) => {
-  const { key } = req.params;
+const handleStorePost = async (req, res) => {
+  const key = req.params.key || req.query.key || req.query.k;
+  if (!key) return res.status(400).json({ error: 'Missing key parameter' });
   try {
     // 1. Simpan ke local disk backup
     writeStore(key, req.body);
@@ -165,7 +166,29 @@ app.post('/api/store/:key', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-});
+};
+
+const handleStoreDelete = async (req, res) => {
+  const key = req.params.key || req.query.key || req.query.k;
+  if (!key) return res.status(400).json({ error: 'Missing key parameter' });
+  try {
+    const file = path.join(DATA_DIR, `${key}.json`);
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    if (isPgConnected()) {
+      await setStoreToPg(key, null);
+    }
+    res.json({ ok: true, deleted: key });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+app.get('/api/store/:key', handleStoreGet);
+app.get('/api/store', handleStoreGet);
+app.post('/api/store/:key', handleStorePost);
+app.post('/api/store', handleStorePost);
+app.delete('/api/store/:key', handleStoreDelete);
+app.delete('/api/store', handleStoreDelete);
 
 // POST simpan banyak key sekaligus (bulk write)
 app.post('/api/bulk', async (req, res) => {

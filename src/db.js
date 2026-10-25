@@ -121,8 +121,8 @@ export const cleanForStorageAndFirebase = (data) => {
     for (const [k, v] of Object.entries(data)) {
       if (v === undefined) {
         cleaned[k] = null;
-      } else if (k === 'fileData' && typeof v === 'string' && v.length > 300) {
-        // Heavy base64 string is stored safely in IndexedDB, keep metadata in localStorage & cloud
+      } else if ((k === 'fileData' || k === 'fileContent') && typeof v === 'string' && v.length > 300) {
+        // Heavy base64 string is stored safely in IndexedDB + Cloud, keep metadata in localStorage
         cleaned[k] = null;
         cleaned['hasStoredFile'] = true;
       } else if (typeof v === 'object' && v !== null) {
@@ -254,22 +254,33 @@ const lsSet = (key, data, skipBroadcast = false) => {
   } catch (e) {
     console.warn(`[MEDIKARA] localStorage quota reached for key "${key}", performing emergency storage cleanup...`, e);
     try {
-      // Clear out obsolete heavy keys from localStorage
+      // 1. Pangkas activity logs ke 30 item terakhir untuk membebaskan ruang segera
+      const rawLogs = localStorage.getItem(LS_PREFIX + 'activity_logs');
+      if (rawLogs) {
+        try {
+          const parsedLogs = JSON.parse(rawLogs);
+          if (Array.isArray(parsedLogs) && parsedLogs.length > 30) {
+            localStorage.setItem(LS_PREFIX + 'activity_logs', JSON.stringify(parsedLogs.slice(0, 30)));
+          }
+        } catch {}
+      }
+
+      // 2. Bersihkan fileData atau data: usang dari seluruh koleksi di localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith(LS_PREFIX)) {
           const raw = localStorage.getItem(k);
-          if (raw && raw.includes('data:')) {
+          if (raw && raw.length > 50000 && raw.includes('data:')) {
             try {
               const parsed = JSON.parse(raw);
               const sanitizedItem = cleanForStorageAndFirebase(parsed);
               localStorage.setItem(k, JSON.stringify(sanitizedItem));
-            } catch {
-              // ignore
-            }
+            } catch {}
           }
         }
       }
+
+      // 3. Simpan kembali data yang sedang disimpan
       localStorage.setItem(LS_PREFIX + key, JSON.stringify(cleaned));
     } catch (innerErr) {
       console.error(`[MEDIKARA] Failed to save key "${key}" to localStorage:`, innerErr);

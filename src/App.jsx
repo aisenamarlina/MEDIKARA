@@ -1005,6 +1005,13 @@ export default function App() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 30 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: "Ukuran berkas melebihi batas maksimal 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+      }));
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
@@ -1021,6 +1028,13 @@ export default function App() {
   const handleIncomingFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 30 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: "Ukuran berkas melebihi batas maksimal 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+      }));
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
@@ -1116,7 +1130,8 @@ export default function App() {
         access: archiveForm.access,
         notes: archiveForm.notes,
         fileName: archiveForm.fileName || `${archiveForm.title}.pdf`,
-        fileData: fileData
+        fileData: null,
+        hasStoredFile: Boolean(fileData)
       };
       const updated = [newDoc, ...digitalArchive];
       updateDBState("digital_archive", updated, setDigitalArchive);
@@ -1179,7 +1194,13 @@ export default function App() {
       }
     }
 
-    const updated = digitalArchive.map(item => item.id === updatedDoc.id ? updatedDoc : item);
+    const docToSave = {
+      ...updatedDoc,
+      fileData: null,
+      hasStoredFile: Boolean(updatedDoc.fileData || updatedDoc.hasStoredFile)
+    };
+
+    const updated = digitalArchive.map(item => item.id === updatedDoc.id ? docToSave : item);
     updateDBState("digital_archive", updated, setDigitalArchive);
     db.addLog("Edit Arsip Digital", "Persuratan", `Dokumen: ${updatedDoc.title} (No: ${updatedDoc.docNo || '-'})`);
     setActivityLogs(db.get("activity_logs"));
@@ -1791,7 +1812,8 @@ export default function App() {
         date: incomingForm.date,
         fileName: incomingForm.fileName || "",
         fileSize: incomingForm.fileSize || "",
-        fileData: fileData
+        fileData: null,
+        hasStoredFile: Boolean(fileData)
       };
       setIncomingLetters(prev => {
         const updated = [newLetter, ...prev];
@@ -2196,7 +2218,12 @@ export default function App() {
           console.error('[MEDIKARA] Gagal simpan file edit surat masuk:', err);
         }
       }
-      const updated = incomingLetters.map(l => l.id === data.id ? data : l);
+      const dataToSave = {
+        ...data,
+        fileData: null,
+        hasStoredFile: Boolean(data.fileData || data.hasStoredFile)
+      };
+      const updated = incomingLetters.map(l => l.id === data.id ? dataToSave : l);
       updateDBState("incoming_letters", updated, setIncomingLetters);
       db.addLog("Edit Surat Masuk", "Persuratan", `Mengubah data surat masuk ${data.refNo}`);
     } else {
@@ -10790,6 +10817,13 @@ export default function App() {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
+                          if (file.size > 30 * 1024 * 1024) {
+                            window.dispatchEvent(new CustomEvent('app-toast', { 
+                              detail: { message: "Ukuran berkas melebihi batas 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+                            }));
+                            e.target.value = '';
+                            return;
+                          }
                           const reader = new FileReader();
                           reader.onload = (event) => {
                             const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
@@ -11148,6 +11182,13 @@ export default function App() {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
+                      if (file.size > 30 * 1024 * 1024) {
+                        window.dispatchEvent(new CustomEvent('app-toast', { 
+                          detail: { message: "Ukuran berkas melebihi batas 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+                        }));
+                        e.target.value = '';
+                        return;
+                      }
                       const reader = new FileReader();
                       reader.onload = (event) => {
                         const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
