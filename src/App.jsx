@@ -7500,19 +7500,14 @@ export default function App() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between',
           padding: '0.85rem 1rem 0.2rem',
           boxSizing: 'border-box'
         }}>
           <button 
             type="button"
-            onClick={() => {
-              if (isMobileMenuOpen) {
-                setIsMobileMenuOpen(false);
-              } else {
-                setSidebarCollapsed(!sidebarCollapsed);
-              }
-            }} 
+            className="sidebar-collapse-desktop-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
             style={{ 
               background: 'none', 
               border: 'none', 
@@ -7530,6 +7525,25 @@ export default function App() {
             title={sidebarCollapsed ? "Perbesar Sidebar" : "Perkecil Sidebar"}
           >
             {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+
+          <button
+            type="button"
+            className="mobile-sidebar-close-btn"
+            onClick={() => setIsMobileMenuOpen(false)}
+            style={{
+              display: 'none',
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              padding: '6px',
+              borderRadius: '8px'
+            }}
+            title="Tutup Menu"
+          >
+            <X size={20} />
           </button>
         </div>
 
@@ -8317,13 +8331,13 @@ export default function App() {
 
 
               {/* 2. Main 2-Column Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.95fr) minmax(0, 1fr)', gap: '1.25rem', alignItems: 'stretch' }}>
+              <div className="dashboard-main-2col-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.95fr) minmax(0, 1fr)', gap: '1.25rem', alignItems: 'stretch' }}>
                 
                 {/* LEFT COLUMN: Aktivitas Surat + (Jenis Surat & Kategori Surat) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   
                   {/* Card: Aktivitas Surat */}
-                  <div style={{
+                  <div className="dashboard-card-top-h" style={{
                     backgroundColor: 'var(--bg-card)',
                     borderRadius: '20px',
                     padding: '1.4rem',
@@ -8477,18 +8491,20 @@ export default function App() {
                   </div>
 
                   {/* Row 2: Jenis Surat + Kategori Surat */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '1.25rem' }}>
+                  <div className="dashboard-sub-2col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '1.25rem', height: '240px', boxSizing: 'border-box' }}>
                     
                     {/* Card: Jenis Surat (Donut Chart) */}
-                    <div style={{
+                    <div className="dashboard-card-bottom-h" style={{
                       backgroundColor: 'var(--bg-card)',
                       borderRadius: '20px',
-                      padding: '1.4rem',
+                      padding: '1.25rem 1.4rem',
                       border: '1px solid var(--border-light)',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.75rem'
+                      height: '240px',
+                      boxSizing: 'border-box',
+                      justifyContent: 'space-between'
                     }}>
                       <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
                         Jenis Surat
@@ -8556,15 +8572,17 @@ export default function App() {
                     </div>
 
                     {/* Card: Kategori Surat (Bars) */}
-                    <div style={{
+                    <div className="dashboard-card-bottom-h" style={{
                       backgroundColor: 'var(--bg-card)',
                       borderRadius: '20px',
-                      padding: '1.4rem',
+                      padding: '1.25rem 1.4rem',
                       border: '1px solid var(--border-light)',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.75rem'
+                      height: '240px',
+                      boxSizing: 'border-box',
+                      justifyContent: 'space-between'
                     }}>
                       <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>
                         Kategori Surat
@@ -8599,7 +8617,7 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   
                   {/* Card: Aktivitas Terbaru */}
-                  <div style={{
+                  <div className="dashboard-card-top-h" style={{
                     backgroundColor: 'var(--bg-card)',
                     borderRadius: '20px',
                     padding: '1.4rem',
@@ -8657,15 +8675,17 @@ export default function App() {
                   </div>
 
                   {/* Card: Notifikasi */}
-                  <div style={{
+                  <div className="dashboard-card-bottom-h" style={{
                     backgroundColor: 'var(--bg-card)',
                     borderRadius: '20px',
-                    padding: '1.4rem',
+                    padding: '1.25rem 1.4rem',
                     border: '1px solid var(--border-light)',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.9rem'
+                    height: '240px',
+                    boxSizing: 'border-box',
+                    justifyContent: 'space-between'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -11264,6 +11284,71 @@ export default function App() {
           {toast.message}
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar (Sidebar transforms to icons at bottom on mobile) */}
+      <nav className="mobile-bottom-nav" aria-label="Navigasi Bawah">
+        <button
+          type="button"
+          onClick={() => { setActiveMenu("dashboard"); setIsMobileMenuOpen(false); }}
+          className={`mobile-bottom-nav-item ${activeMenu === "dashboard" ? "active" : ""}`}
+        >
+          <div className="mobile-bottom-nav-icon">
+            <Home size={20} />
+          </div>
+          <span className="mobile-bottom-nav-label">Beranda</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { 
+            if (activeMenu === 'letters_in') {
+              setActiveMenu('letters_out');
+            } else {
+              setActiveMenu('letters_in');
+            }
+            setIsMobileMenuOpen(false); 
+          }}
+          className={`mobile-bottom-nav-item ${['letters_in', 'letters_out'].includes(activeMenu) ? "active" : ""}`}
+        >
+          <div className="mobile-bottom-nav-icon">
+            <Mail size={20} />
+          </div>
+          <span className="mobile-bottom-nav-label">Surat</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveMenu("certificates"); setIsMobileMenuOpen(false); }}
+          className={`mobile-bottom-nav-item ${activeMenu === "certificates" ? "active" : ""}`}
+        >
+          <div className="mobile-bottom-nav-icon">
+            <Award size={20} />
+          </div>
+          <span className="mobile-bottom-nav-label">Sertifikat</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveMenu("archive"); setIsMobileMenuOpen(false); }}
+          className={`mobile-bottom-nav-item ${activeMenu === "archive" ? "active" : ""}`}
+        >
+          <div className="mobile-bottom-nav-icon">
+            <Folder size={20} />
+          </div>
+          <span className="mobile-bottom-nav-label">Arsip</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={`mobile-bottom-nav-item ${isMobileMenuOpen || ['reports', 'report_letters', 'report_assets', 'settings'].includes(activeMenu) ? "active" : ""}`}
+        >
+          <div className="mobile-bottom-nav-icon">
+            <Menu size={20} />
+          </div>
+          <span className="mobile-bottom-nav-label">Menu</span>
+        </button>
+      </nav>
 
     </div>
   );
