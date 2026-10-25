@@ -34,5 +34,16 @@
     "officer": "Admin",
     "notes": "-",
     "status": "Ditolak"
+  },
+  {
+    "id": "BK-004/VIII/2026",
+    "qty": 3,
+    "date": "2026-08-27",
+    "unit": "Pcs",
+    "notes": "Kebutuhan loket pendaftaran",
+    "officer": "Admin Gudang",
+    "itemCode": "B-9184",
+    "itemName": "Ballpoint Standard Hitam",
+    "recipient": "Resepsionis"
   }
 ]

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -17,7 +17,8 @@ import {
   Wallet, Utensils, Store, Sun, Moon, Bookmark,
   File, FolderOpen, Shield, Database, Upload, Info, Lock,
   Calendar, Activity, CheckCircle, Inbox, Send, FileBadge, User, Key, EyeOff, FileDown, Image as ImageIcon, Briefcase, Edit, Menu, ArrowLeft, AlertCircle,
-  ExternalLink, X, Sliders, MapPin, TrendingUp, Building2, Home, Folder
+  ExternalLink, X, Sliders, MapPin, TrendingUp, Building2, Home, Folder,
+  CircleDot, MinusCircle
 } from 'lucide-react';
 import InventarisGudang from './pages/InventarisGudang';
 import DataAsetInventaris from './pages/DataAsetInventaris';
@@ -478,7 +479,7 @@ export default function App() {
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [openSystems, setOpenSystems] = useState({
-    surat: false,
+    surat: true,
     gudang: false,
     fixed_asset: false
   });
@@ -710,6 +711,189 @@ export default function App() {
     });
   });
   const [certificates, setCertificates] = useState(() => db.get("certificates") || []);
+
+  // ── Dynamic Dashboard Metrics & Chart Data (Aktivitas Surat) ──
+  const activityChartData = useMemo(() => {
+    const incoming = incomingLetters || [];
+    const outgoing = outgoingLetters || [];
+
+    const formatYMD = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const parseLetterDateKey = (rawDate) => {
+      if (!rawDate) return null;
+      if (typeof rawDate === 'string' && rawDate.length >= 10 && rawDate.charAt(4) === '-' && rawDate.charAt(7) === '-') {
+        return rawDate.slice(0, 10);
+      }
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return null;
+      return formatYMD(d);
+    };
+
+    const inMap = new Map();
+    incoming.forEach(l => {
+      const key = parseLetterDateKey(l.date || l.createdAt);
+      if (key) inMap.set(key, (inMap.get(key) || 0) + 1);
+    });
+
+    const outMap = new Map();
+    outgoing.forEach(l => {
+      const key = parseLetterDateKey(l.date || l.createdAt);
+      if (key) outMap.set(key, (outMap.get(key) || 0) + 1);
+    });
+
+    const indonesianMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const today = new Date();
+
+    if (dashboardRange === '7d') {
+      const result = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = formatYMD(d);
+        const label = `${d.getDate()} ${indonesianMonths[d.getMonth()]}`;
+        result.push({
+          date: label,
+          fullDate: key,
+          Masuk: inMap.get(key) || 0,
+          Keluar: outMap.get(key) || 0
+        });
+      }
+      return result;
+    }
+
+    if (dashboardRange === '30d') {
+      const result = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = formatYMD(d);
+        const label = `${d.getDate()} ${indonesianMonths[d.getMonth()]}`;
+        result.push({
+          date: label,
+          fullDate: key,
+          Masuk: inMap.get(key) || 0,
+          Keluar: outMap.get(key) || 0
+        });
+      }
+      return result;
+    }
+
+    if (dashboardRange === '3m') {
+      const result = [];
+      const numWeeks = 12;
+      for (let i = numWeeks - 1; i >= 0; i--) {
+        const endD = new Date(today);
+        endD.setDate(today.getDate() - (i * 7));
+        const startD = new Date(today);
+        startD.setDate(today.getDate() - ((i + 1) * 7 - 1));
+
+        let sumMasuk = 0;
+        let sumKeluar = 0;
+        for (let cur = new Date(startD); cur <= endD; cur.setDate(cur.getDate() + 1)) {
+          const key = formatYMD(cur);
+          sumMasuk += inMap.get(key) || 0;
+          sumKeluar += outMap.get(key) || 0;
+        }
+
+        const label = `${startD.getDate()} ${indonesianMonths[startD.getMonth()]}`;
+        const rangeLabel = `${startD.getDate()} ${indonesianMonths[startD.getMonth()]} - ${endD.getDate()} ${indonesianMonths[endD.getMonth()]}`;
+        result.push({
+          date: label,
+          rangeLabel,
+          Masuk: sumMasuk,
+          Keluar: sumKeluar
+        });
+      }
+      return result;
+    }
+
+    return [];
+  }, [incomingLetters, outgoingLetters, dashboardRange]);
+
+  const maxChartValue = useMemo(() => {
+    let max = 0;
+    (activityChartData || []).forEach(d => {
+      if (d.Masuk > max) max = d.Masuk;
+      if (d.Keluar > max) max = d.Keluar;
+    });
+    return Math.max(max + 1, 5);
+  }, [activityChartData]);
+
+  // ── Dynamic Jenis Surat (Masuk vs Keluar) ──
+  const letterTypeDistribution = useMemo(() => {
+    const inCount = incomingLetters?.length || 0;
+    const outCount = outgoingLetters?.length || 0;
+    const total = inCount + outCount;
+    const inPercent = total > 0 ? Math.round((inCount / total) * 100) : 0;
+    const outPercent = total > 0 ? (100 - inPercent) : 0;
+    return {
+      total,
+      inCount,
+      outCount,
+      inPercent,
+      outPercent
+    };
+  }, [incomingLetters, outgoingLetters]);
+
+  // ── Dynamic Kategori Surat (Breakdown by Category) ──
+  const letterCategoriesDistribution = useMemo(() => {
+    const outgoing = outgoingLetters || [];
+    const incoming = incomingLetters || [];
+    const total = (outgoing.length + incoming.length) || 1;
+
+    const counts = {
+      sop: 0,
+      skep: 0,
+      und: 0,
+      st: 0,
+      sket: 0,
+      dinas: 0,
+      lainnya: 0
+    };
+
+    outgoing.forEach(l => {
+      const code = (l.typeCode || '').toUpperCase();
+      const tName = (l.templateTypeName || l.templateType || '').toLowerCase();
+      if (code === 'SOP' || tName.includes('sop') || tName.includes('operasional')) counts.sop++;
+      else if (code === 'SKEP' || tName.includes('keputusan')) counts.skep++;
+      else if (code === 'UND' || tName.includes('undangan')) counts.und++;
+      else if (code === 'ST' || tName.includes('tugas')) counts.st++;
+      else if (code === 'SKET' || tName.includes('keterangan')) counts.sket++;
+      else if (code === 'SB' || tName.includes('biasa') || tName.includes('dinas')) counts.dinas++;
+      else counts.lainnya++;
+    });
+
+    const list = [
+      { label: 'Surat SOP', icon: FileBadge, count: counts.sop },
+      { label: 'Surat Keputusan', icon: Building2, count: counts.skep },
+      { label: 'Surat Undangan', icon: Mail, count: counts.und },
+      { label: 'Surat Tugas', icon: FileText, count: counts.st },
+      { label: 'Surat Keterangan', icon: ClipboardList, count: counts.sket },
+      { label: 'Surat Dinas', icon: Send, count: counts.dinas },
+      { label: 'Surat Masuk', icon: Inbox, count: incoming.length },
+      { label: 'Lainnya', icon: FolderArchive, count: counts.lainnya }
+    ]
+    .filter(item => item.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4)
+    .map(item => ({
+      ...item,
+      percent: Math.round((item.count / total) * 100)
+    }));
+
+    if (list.length === 0) {
+      return [
+        { label: 'Belum Ada Surat', icon: FileText, count: 0, percent: 0 }
+      ];
+    }
+
+    return list;
+  }, [outgoingLetters, incomingLetters]);
 
   // Global search filtering logic (helper)
   const getSearchResults = () => {
@@ -1004,31 +1188,55 @@ export default function App() {
   const [currentPrintDoc, setCurrentPrintDoc] = useState(null);
   const [currentPrintType, setCurrentPrintType] = useState(null); // 'letter', 'cert', 'report', 'report_letters'
   const [previewPageCount, setPreviewPageCount] = useState(1);
+  const [previewPages, setPreviewPages] = useState([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const cachedPdfResultRef = useRef(null);
 
-  // Hitung jumlah halaman fisik (A4) secara akurat saat dokumen pratinjau dibuka
+  // Generate lembar pratinjau dokumen (A4 dengan sekat visual antar halaman) & hitung jumlah halaman akurat
   useEffect(() => {
     if (!currentPrintDoc) {
+      setPreviewPages([]);
+      setIsPreviewLoading(false);
+      cachedPdfResultRef.current = null;
       setPreviewPageCount(1);
       return;
     }
+
     if (currentPrintType === "cert") {
       setPreviewPageCount(1);
-      return;
     }
-    const updatePages = () => {
+
+    let isMounted = true;
+    setIsPreviewLoading(true);
+    setPreviewPages([]);
+    cachedPdfResultRef.current = null;
+
+    const timer = setTimeout(async () => {
       const printArea = document.querySelector('.print-area');
-      if (printArea) {
-        const w = printArea.offsetWidth || 794;
-        const a4H = w * (297 / 210);
-        const scrollH = printArea.scrollHeight || a4H;
-        // Toleransi padding/margin 30px
-        const calculated = Math.max(1, Math.ceil((scrollH - 30) / (a4H - 20)));
-        setPreviewPageCount(calculated);
+      if (!printArea || !isMounted) return;
+
+      try {
+        const pdf = await generateDocPdf(printArea);
+        if (isMounted && pdf) {
+          cachedPdfResultRef.current = pdf;
+          if (pdf.pageDataUrls && pdf.pageDataUrls.length > 0) {
+            setPreviewPages(pdf.pageDataUrls);
+            setPreviewPageCount(pdf.totalPagesCount || pdf.pageDataUrls.length);
+          }
+        }
+      } catch (err) {
+        console.error('Error generating document preview pages:', err);
+      } finally {
+        if (isMounted) {
+          setIsPreviewLoading(false);
+        }
       }
+    }, 120);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
     };
-    const t1 = setTimeout(updatePages, 80);
-    const t2 = setTimeout(updatePages, 350);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [currentPrintDoc, currentPrintType]);
   const [selectedReportPeriod, setSelectedReportPeriod] = useState({ month: "08", year: "2026", type: "all" });
   const [reportFilters, setReportFilters] = useState({
@@ -2488,6 +2696,11 @@ export default function App() {
           parent = parent.parentElement;
         }
 
+        cloneEl.style.position = 'relative';
+        cloneEl.style.left = '0';
+        cloneEl.style.top = '0';
+        cloneEl.style.opacity = '1';
+        cloneEl.style.display = 'block';
         cloneEl.style.width = isLandscape ? '297mm' : '210mm';
         cloneEl.style.minWidth = isLandscape ? '297mm' : '210mm';
         cloneEl.style.maxWidth = isLandscape ? '297mm' : '210mm';
@@ -2567,7 +2780,10 @@ export default function App() {
 
     // Khusus Sertifikat: Selalu 1 Halaman Penuh Landscape A4 Presisi Tinggi Tanpa Slicing
     if (isLandscape) {
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
+      const certDataUrl = canvas.toDataURL('image/png');
+      pdf.addImage(certDataUrl, 'PNG', 0, 0, pdfW, pdfH);
+      pdf.pageDataUrls = [certDataUrl];
+      pdf.totalPagesCount = 1;
       return pdf;
     }
 
@@ -2677,13 +2893,13 @@ export default function App() {
       ? Math.max(...leafPositions.map(l => l.bottom))
       : canvas.height;
 
+    const pageCanvases = [];
+
     while (currentY < canvas.height - 5 && pageIdx < 50) {
       const remainingH = canvas.height - currentY;
       if (pageIdx > 0 && (remainingH <= (25 * SCALE) || currentY >= maxContentBottom - (5 * SCALE))) {
         break; // Jika semua konten sudah masuk halaman sebelumnya, jangan buat halaman baru
       }
-
-      if (pageIdx > 0) pdf.addPage();
 
       let destY;
       let targetEnd;
@@ -2737,16 +2953,29 @@ export default function App() {
         }
       }
 
-      pdf.addImage(sl.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
+      pageCanvases.push(sl);
       currentY = cutY;
       pageIdx++;
     }
 
-    const totalPages = pageIdx;
+    const totalPages = pageCanvases.length;
 
     // Perbarui nomor halaman di dalam Kotak Header SOP Halaman 1 agar dinamis sesuai total halaman asli
-    if (isSOPDocument && cloneSopHalamanBoxMm) {
+    if (isSOPDocument && cloneSopHalamanBoxMm && pageCanvases[0]) {
       try {
+        const sc0 = pageCanvases[0].getContext('2d');
+        const scaleMmToPx = canvas.width / pdfW;
+        const boxX = cloneSopHalamanBoxMm.x * scaleMmToPx;
+        const boxY = cloneSopHalamanBoxMm.y * scaleMmToPx;
+        const boxW = Math.max(cloneSopHalamanBoxMm.w + 12, 22) * scaleMmToPx;
+        const boxH = cloneSopHalamanBoxMm.h * scaleMmToPx;
+        sc0.fillStyle = '#ffffff';
+        sc0.fillRect(boxX - 2, boxY, boxW, boxH);
+        sc0.font = `${Math.round(9.5 * SCALE * 1.33)}px Arial, Helvetica, sans-serif`;
+        sc0.fillStyle = '#000000';
+        sc0.textAlign = 'left';
+        sc0.fillText(`1 dari ${totalPages}`, boxX, boxY + boxH - (1.2 * scaleMmToPx));
+
         pdf.setPage(1);
         pdf.setFillColor(255, 255, 255);
         pdf.rect(cloneSopHalamanBoxMm.x - 0.5, cloneSopHalamanBoxMm.y, Math.max(cloneSopHalamanBoxMm.w + 12, 22), cloneSopHalamanBoxMm.h, 'F');
@@ -2755,18 +2984,26 @@ export default function App() {
         pdf.setTextColor(0, 0, 0);
         pdf.text(`1 dari ${totalPages}`, cloneSopHalamanBoxMm.x, cloneSopHalamanBoxMm.y + cloneSopHalamanBoxMm.h - 1.2);
       } catch (err) {
-        console.warn('Gagal update header box halaman SOP:', err);
+        console.warn('Gagal update header box canvas halaman SOP:', err);
       }
     }
 
-    // Nomor Halaman Resmi di Bagian Bawah: langsung format "X dari Y" tanpa kata "Halaman"
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8.5);
-      pdf.setTextColor(100, 116, 139);
-      pdf.text(`${i} dari ${totalPages}`, pdfW / 2, pdfH - 5, { align: 'center' });
-    }
+    // Nomor Halaman Resmi di Bagian Bawah: langsung format "X dari Y" di canvas & tambahkan ke PDF
+    const bottomOffsetPx = Math.round((5 / pdfH) * fullPageHeightCanvas);
+    pageCanvases.forEach((sl, idx) => {
+      const pageNum = idx + 1;
+      const sc = sl.getContext('2d');
+      sc.font = `${Math.round(8.5 * SCALE * 1.33)}px Arial, Helvetica, sans-serif`;
+      sc.fillStyle = '#64748b';
+      sc.textAlign = 'center';
+      sc.fillText(`${pageNum} dari ${totalPages}`, sl.width / 2, sl.height - bottomOffsetPx);
+
+      if (idx > 0) pdf.addPage();
+      pdf.addImage(sl.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
+    });
+
+    pdf.pageDataUrls = pageCanvases.map(sl => sl.toDataURL('image/png'));
+    pdf.totalPagesCount = totalPages;
 
     return pdf;
   };
@@ -3218,7 +3455,7 @@ export default function App() {
                     const origHTML = btn.innerHTML;
                     btn.innerHTML = '⏳ Menyiapkan...';
                     try {
-                      const pdf = await generateDocPdf(printArea);
+                      const pdf = cachedPdfResultRef.current || await generateDocPdf(printArea);
                       const blob = pdf.output('blob');
                       const blobUrl = URL.createObjectURL(blob);
                       window.open(blobUrl, '_blank');
@@ -3259,7 +3496,7 @@ export default function App() {
                     const origHTML = btn.innerHTML;
                     btn.innerHTML = '⏳ Mengunduh...';
                     try {
-                      const pdf = await generateDocPdf(printArea);
+                      const pdf = cachedPdfResultRef.current || await generateDocPdf(printArea);
                       pdf.save(`Dokumen_${currentPrintDoc?.docNo || currentPrintDoc?.id || 'MEDIKARA'}.pdf`);
                     } catch (err) {
                       console.error('PDF download error:', err);
@@ -3323,7 +3560,7 @@ export default function App() {
                   const origHTML = btn.innerHTML;
                   btn.innerHTML = '⏳ Menyiapkan...';
                   try {
-                    const pdf = await generateDocPdf(printArea);
+                    const pdf = cachedPdfResultRef.current || await generateDocPdf(printArea);
                     const blob = pdf.output('blob');
                     const blobUrl = URL.createObjectURL(blob);
                     window.open(blobUrl, '_blank');
@@ -3363,7 +3600,7 @@ export default function App() {
                   const origHTML = btn.innerHTML;
                   btn.innerHTML = '⏳ Mengunduh...';
                   try {
-                    const pdf = await generateDocPdf(printArea);
+                    const pdf = cachedPdfResultRef.current || await generateDocPdf(printArea);
                     pdf.save(`Dokumen_${currentPrintDoc?.docNo || currentPrintDoc?.id || 'MEDIKARA'}.pdf`);
                   } catch (err) {
                     console.error('PDF download error:', err);
@@ -3410,28 +3647,128 @@ export default function App() {
             {/* Scrollable Center Wrapper so document never gets negative left on mobile */}
             <div style={{
               display: 'flex',
-              justifyContent: 'center',
+              flexDirection: 'column',
+              alignItems: 'center',
               width: 'max-content',
               minWidth: '100%',
               boxSizing: 'border-box'
             }}>
-              {/* Real official printed output */}
+              {/* TAMPILAN LEMBAR-LEMBAR HALAMAN RESMI DENGAN SEKAT ANTAR HALAMAN (A4) */}
+              {previewPages.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '24px', // ── SEKAT ANTAR LEMBAR PERSIS SEPERTI DI PDF VIEWER ──
+                  boxSizing: 'border-box'
+                }}>
+                  {previewPages.map((pageImg, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        width: currentPrintType === 'cert' ? '297mm' : '210mm',
+                        minWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                        maxWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                        height: 'auto',
+                        aspectRatio: currentPrintType === 'cert' ? '297 / 210' : '210 / 297',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                        boxSizing: 'border-box',
+                        position: 'relative',
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <img
+                        src={pageImg}
+                        alt={`Halaman ${idx + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'block',
+                          objectFit: 'contain'
+                        }}
+                      />
+                    </div>
+                  ))}
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.45rem 1rem',
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: '20px',
+                    color: '#e2e8f0',
+                    fontSize: '0.78rem',
+                    marginTop: '0.5rem',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}>
+                    <FileText size={13} style={{ color: '#34d399' }} />
+                    <span>Dokumen Resmi Klinik Baiturrahman • Total {previewPages.length} Lembar (A4)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* LOADING SKELETON LEMBAR A4 */}
+              {isPreviewLoading && previewPages.length === 0 && (
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  width: currentPrintType === 'cert' ? '297mm' : '210mm',
+                  minWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                  maxWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                  minHeight: currentPrintType === 'cert' ? '210mm' : '297mm',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '3rem 1.5rem',
+                  boxSizing: 'border-box',
+                  color: '#475569',
+                  borderRadius: '2px'
+                }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    border: '3px solid #e2e8f0',
+                    borderTopColor: '#10b981',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                    marginBottom: '1rem'
+                  }} />
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>
+                    Menyiapkan Pratinjau Lembar Dokumen A4...
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Menyusun tata letak lembar dokumen resmi dengan sekat halaman
+                  </div>
+                </div>
+              )}
+
+              {/* Real official printed output source (rendered for html2canvas to capture) */}
               <div style={{ 
-            backgroundColor: '#ffffff', 
-            width: currentPrintType === 'cert' ? '297mm' : '210mm', 
-            minWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
-            maxWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
-            height: 'auto',
-            minHeight: currentPrintType === 'cert' ? '210mm' : '297mm',
-            padding: currentPrintType === 'cert' ? '0' : (currentPrintDoc?.templateType === 'SOP' || currentPrintDoc?.typeCode === 'SOP') ? '12mm 14mm' : '20mm', 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)', 
-            color: '#000', 
-            fontFamily: currentPrintType === 'letter' ? 'Calibri, sans-serif' : 'serif',
-            fontSize: currentPrintType === 'letter' ? '12pt' : 'inherit',
-            boxSizing: 'border-box',
-            flexShrink: 0,
-            overflow: 'visible'
-          }} className="print-area">
+                position: (previewPages.length > 0 || isPreviewLoading) ? 'fixed' : 'relative',
+                left: (previewPages.length > 0 || isPreviewLoading) ? '-9999px' : 'auto',
+                top: 0,
+                opacity: (previewPages.length > 0 || isPreviewLoading) ? 0 : 1,
+                pointerEvents: (previewPages.length > 0 || isPreviewLoading) ? 'none' : 'auto',
+                zIndex: -1,
+                backgroundColor: '#ffffff', 
+                width: currentPrintType === 'cert' ? '297mm' : '210mm', 
+                minWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                maxWidth: currentPrintType === 'cert' ? '297mm' : '210mm',
+                height: 'auto',
+                minHeight: currentPrintType === 'cert' ? '210mm' : '297mm',
+                padding: currentPrintType === 'cert' ? '0' : (currentPrintDoc?.templateType === 'SOP' || currentPrintDoc?.typeCode === 'SOP') ? '12mm 14mm' : '20mm', 
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)', 
+                color: '#000', 
+                fontFamily: currentPrintType === 'letter' ? 'Calibri, sans-serif' : 'serif',
+                fontSize: currentPrintType === 'letter' ? '12pt' : 'inherit',
+                boxSizing: 'border-box',
+                flexShrink: 0,
+                overflow: 'visible'
+              }} className="print-area">
           
           {currentPrintType === "letter" && (
             <div style={{ lineHeight: '1.5', fontSize: '12pt' }}>
@@ -7145,95 +7482,124 @@ export default function App() {
       {/* Sidebar Navigation */}
       <aside className={`sidebar-container ${isMobileMenuOpen ? 'mobile-open' : ''}`} style={{
         position: 'relative', 
-        height: '100%',
-        maxHeight: '100dvh',
-        width: sidebarCollapsed ? '72px' : '260px', 
-        background: 'var(--bg-sidebar)',
-        boxShadow: '4px 0 24px rgba(46, 125, 98, 0.04)', /* Subtle premium shadow */
+        height: 'calc(100dvh - 24px)',
+        margin: '12px 0 12px 14px',
+        width: sidebarCollapsed ? '76px' : '260px', 
+        backgroundColor: '#ffffff',
+        borderRadius: '24px',
+        border: '1px solid rgba(16, 185, 129, 0.18)',
+        boxShadow: '0 10px 30px rgba(16, 185, 129, 0.06), 0 2px 8px rgba(0,0,0,0.03)',
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        display: 'flex', flexDirection: 'column', flexShrink: 0,
-        zIndex: 40
+        display: 'flex', 
+        flexDirection: 'column', 
+        flexShrink: 0,
+        zIndex: 40,
+        overflow: 'hidden'
       }}>
-        {/* Logo Branding Header */}
-        <div style={{ 
-          padding: sidebarCollapsed ? '1rem 0.5rem' : '1.25rem 1.25rem 1rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.75rem', 
+        {/* Top Controls: Collapse Toggle */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-          borderBottom: '1px solid var(--border-light)',
-          position: 'relative',
-          minHeight: '72px',
+          padding: '0.85rem 1rem 0.2rem',
           boxSizing: 'border-box'
         }}>
-          {!sidebarCollapsed ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', overflow: 'hidden' }}>
-              {/* Logo klinik – selalu tampilkan dari settings atau fallback ke file public */}
-              <img
-                src={settings?.logo || '/logo.png'}
-                alt="Logo Klinik"
-                style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '8px', flexShrink: 0 }}
-                onError={e => { e.currentTarget.style.display = 'none'; }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '0.02em', display: 'block', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif', lineHeight: 1.1, whiteSpace: 'nowrap' }}>MEDIKARA</span>
-                <span style={{ fontSize: '0.62rem', color: 'var(--primary)', display: 'block', letterSpacing: '0.05em', fontWeight: 700, textTransform: 'uppercase', marginTop: '0.1rem', whiteSpace: 'nowrap' }}>Klinik Baiturrahman</span>
-              </div>
-            </div>
-          ) : (
-            /* Collapsed: tampilkan logo klinik selalu */
-            <img
-              src={settings?.logo || '/logo.png'}
-              alt="Logo Klinik"
-              title={settings?.clinicName || "MEDIKARA – Klik untuk tampilkan menu"}
-              style={{ width: '46px', height: '46px', objectFit: 'contain', borderRadius: '10px', cursor: 'pointer' }}
-              onClick={() => setSidebarCollapsed(false)}
-              onError={e => { e.currentTarget.style.display = 'none'; }}
-            />
-          )}
-          
-          {/* Close button for mobile sidebar */}
           <button 
             type="button"
-            className="mobile-sidebar-close-btn"
-            onClick={() => setIsMobileMenuOpen(false)}
-            title="Tutup Menu"
-          >
-            <X size={20} />
-          </button>
-          
-          <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+            onClick={() => {
+              if (isMobileMenuOpen) {
+                setIsMobileMenuOpen(false);
+              } else {
+                setSidebarCollapsed(!sidebarCollapsed);
+              }
+            }} 
             style={{ 
-              position: 'absolute', 
-              right: '-14px',
-              top: '22px',
-              width: '28px', height: '28px', 
-              borderRadius: '50%', backgroundColor: 'var(--bg-card)', 
-              border: '1px solid var(--border)', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              cursor: 'pointer', boxShadow: 'var(--shadow-sm)', zIndex: 10,
-              color: 'var(--primary)'
+              background: 'none', 
+              border: 'none', 
+              padding: '4px',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer',
+              color: '#059669',
+              borderRadius: '6px',
+              transition: 'background-color 0.2s'
             }}
-            title={sidebarCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+            onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'}
+            onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            title={sidebarCollapsed ? "Perbesar Sidebar" : "Perkecil Sidebar"}
           >
-            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
 
+        {/* Logo Branding Header (Centered) */}
+        <div style={{ 
+          padding: sidebarCollapsed ? '0.4rem 0.5rem 0.75rem' : '0.2rem 1rem 1rem', 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center',
+          position: 'relative',
+          boxSizing: 'border-box',
+          textAlign: 'center'
+        }}>
+          {/* Logo klinik – selalu tampilkan dari settings atau fallback ke file public, logo tidak berubah */}
+          <img
+            src={settings?.logo || '/logo.png'}
+            alt="Logo Klinik"
+            title={settings?.clinicName || "MEDIKARA"}
+            style={{ 
+              width: sidebarCollapsed ? '44px' : '56px', 
+              height: sidebarCollapsed ? '44px' : '56px', 
+              objectFit: 'contain', 
+              display: 'block',
+              margin: '0 auto 0.5rem',
+              filter: 'drop-shadow(0 4px 8px rgba(16, 185, 129, 0.18))',
+              cursor: sidebarCollapsed ? 'pointer' : 'default'
+            }}
+            onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }}
+            onError={e => { e.currentTarget.style.display = 'none'; }}
+          />
+          {!sidebarCollapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ 
+                fontWeight: 800, 
+                fontSize: '1.25rem', 
+                letterSpacing: '0.04em', 
+                color: '#065f46', 
+                fontFamily: 'Outfit, sans-serif', 
+                lineHeight: 1.15, 
+                whiteSpace: 'nowrap' 
+              }}>
+                MEDIKARA
+              </span>
+              <span style={{ 
+                fontSize: '0.62rem', 
+                color: '#059669', 
+                letterSpacing: '0.06em', 
+                fontWeight: 700, 
+                textTransform: 'uppercase', 
+                marginTop: '0.2rem', 
+                whiteSpace: 'nowrap' 
+              }}>
+                KLINIK BAITURRAHMAN
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Navigation Items */}
         <nav 
           onClick={(e) => {
-            if (e.target.closest('.sidebar-item')) {
+            if (e.target.closest('.sidebar-item') || e.target.closest('.sidebar-subitem')) {
               setIsMobileMenuOpen(false);
             }
           }}
           style={{ 
             flex: '1 1 0%', 
             minHeight: 0, 
-            height: '100%',
-            padding: '1rem 0.75rem calc(3.5rem + env(safe-area-inset-bottom, 24px))', 
+            padding: sidebarCollapsed ? '0.4rem 0.4rem' : '0.4rem 0.85rem 0.5rem', 
             display: 'flex', 
             flexDirection: 'column', 
             gap: '0.35rem', 
@@ -7248,7 +7614,7 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "dashboard" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Dashboard" : ""}
           >
-            <Home size={19} />
+            <Home size={19} style={{ color: activeMenu === "dashboard" ? '#064e3b' : '#059669', flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Dashboard</span>}
           </button>
 
@@ -7258,34 +7624,36 @@ export default function App() {
               if (sidebarCollapsed) { setSidebarCollapsed(false); }
               toggleSystem("surat");
             }} 
-            className={`sidebar-item ${['letters_in', 'letters_out'].includes(activeMenu) ? 'active' : ''}`}
+            className={`sidebar-item ${['letters_in', 'letters_out'].includes(activeMenu) && !openSystems.surat ? 'active' : ''}`}
             title={sidebarCollapsed ? "Persuratan" : ""}
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <Mail size={19} />
+              <Mail size={19} style={{ color: ['letters_in', 'letters_out'].includes(activeMenu) ? '#064e3b' : '#059669', flexShrink: 0 }} />
               {!sidebarCollapsed && <span>Persuratan</span>}
             </div>
             {!sidebarCollapsed && (
-              openSystems.surat ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+              openSystems.surat 
+                ? <ChevronDown size={14} style={{ color: '#059669' }} /> 
+                : <ChevronRight size={14} style={{ color: '#64748b' }} />
             )}
           </button>
           
           {/* Sub menu Persuratan */}
           {openSystems.surat && !sidebarCollapsed && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1.75rem', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.25rem', marginBottom: '0.2rem' }}>
               <button 
                 onClick={() => setActiveMenu("letters_in")} 
-                className={`sidebar-item ${activeMenu === "letters_in" ? "active" : ""}`}
-                style={{ padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+                className={`sidebar-subitem ${activeMenu === "letters_in" ? "active" : ""}`}
               >
+                <CircleDot size={14} style={{ color: activeMenu === "letters_in" ? '#047857' : '#10b981', flexShrink: 0 }} />
                 <span>Surat Masuk</span>
               </button>
               <button 
                 onClick={() => setActiveMenu("letters_out")} 
-                className={`sidebar-item ${activeMenu === "letters_out" ? "active" : ""}`}
-                style={{ padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+                className={`sidebar-subitem ${activeMenu === "letters_out" ? "active" : ""}`}
               >
+                <MinusCircle size={14} style={{ color: activeMenu === "letters_out" ? '#047857' : '#10b981', flexShrink: 0 }} />
                 <span>Surat Keluar</span>
               </button>
             </div>
@@ -7297,7 +7665,7 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "certificates" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Sertifikat & Piagam" : ""}
           >
-            <Award size={19} />
+            <Award size={19} style={{ color: activeMenu === "certificates" ? '#064e3b' : '#059669', flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Sertifikat & Piagam</span>}
           </button>
 
@@ -7307,22 +7675,22 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "archive" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Arsip Digital" : ""}
           >
-            <Folder size={19} />
+            <Folder size={19} style={{ color: activeMenu === "archive" ? '#064e3b' : '#059669', flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Arsip Digital</span>}
           </button>
 
           {/* Laporan */}
           <button 
             onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
-            className={`sidebar-item ${activeMenu === "reports" ? "active" : ""}`} 
+            className={`sidebar-item ${['reports', 'report_letters', 'report_assets'].includes(activeMenu) ? "active" : ""}`} 
             title={sidebarCollapsed ? "Laporan" : ""}
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <FileText size={19} />
+              <FileText size={19} style={{ color: ['reports', 'report_letters', 'report_assets'].includes(activeMenu) ? '#064e3b' : '#059669', flexShrink: 0 }} />
               {!sidebarCollapsed && <span>Laporan</span>}
             </div>
-            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
+            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: '#64748b' }} />}
           </button>
 
           {/* Pengaturan Sistem */}
@@ -7333,29 +7701,32 @@ export default function App() {
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <Settings size={19} />
+              <Settings size={19} style={{ color: activeMenu === "settings" ? '#064e3b' : '#059669', flexShrink: 0 }} />
               {!sidebarCollapsed && <span>Pengaturan Sistem</span>}
             </div>
-            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
+            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: '#64748b' }} />}
           </button>
 
           {/* Spacer */}
-          <div style={{ flex: 1, minHeight: '1rem' }} />
-
-
-
+          <div style={{ flex: 1, minHeight: '0.4rem' }} />
 
           {/* Logout button */}
           <button 
             onClick={handleLogout} 
             className="sidebar-item danger" 
-            style={{ marginTop: '0.4rem' }} 
+            style={{ 
+              borderRadius: '12px',
+              padding: '0.65rem 1rem',
+              fontSize: '0.88rem'
+            }} 
             title={sidebarCollapsed ? "Keluar" : ""}
           >
             <LogOut size={18} />
             {!sidebarCollapsed && <span>Keluar</span>}
           </button>
         </nav>
+
+
       </aside>
 
       {/* Overlay for mobile sidebar */}
@@ -7409,24 +7780,46 @@ export default function App() {
           </div>
         )}
 
-        {/* Header bar */}
+        {/* Header bar (Floating Card Navbar matching Sidebar & Design System) */}
         <header style={{ 
-          height: '56px', 
-          backgroundColor: 'var(--bg-card)', 
+          height: '64px', 
+          backgroundColor: theme === 'dark' ? 'rgba(15, 30, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)', 
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between', 
-          padding: '0 1.5rem', 
-          borderBottom: '1px solid var(--border)',
+          padding: '0 1.25rem', 
+          margin: '12px 1.5rem 0 1rem',
+          borderRadius: '20px',
+          border: '1px solid rgba(16, 185, 129, 0.18)',
+          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.05), 0 1px 3px rgba(0,0,0,0.02)',
           position: 'sticky',
-          top: 0,
-          zIndex: 30
+          top: '12px',
+          zIndex: 30,
+          transition: 'all 0.25s ease'
         }}>
           {/* Global Search Bar (Left Side) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
-              <Menu size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              className="mobile-menu-btn" 
+              onClick={() => setIsMobileMenuOpen(true)}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '11px',
+                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f0fdf4',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                color: '#059669',
+                display: 'none',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <Menu size={19} />
             </button>
+
             {activeMenu === "dashboard" && (
               <div className="header-search-box" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <button 
@@ -7437,10 +7830,10 @@ export default function App() {
                       document.getElementById('global-search-input')?.focus();
                     }
                   }}
-                  style={{ position: 'absolute', left: '14px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ position: 'absolute', left: '12px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
                   title="Cari"
                 >
-                  <Search size={15} style={{ color: 'var(--text-muted)' }} />
+                  <Search size={16} style={{ color: '#059669' }} />
                 </button>
                 <input 
                   id="global-search-input"
@@ -7456,23 +7849,42 @@ export default function App() {
                     }
                   }}
                   style={{ 
-                    padding: '0.45rem 1.25rem 0.45rem 2.5rem', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '9999px', 
+                    height: '40px',
+                    padding: '0 4rem 0 2.5rem', 
+                    border: '1.5px solid rgba(16, 185, 129, 0.22)', 
+                    borderRadius: '12px', 
                     outline: 'none', 
                     fontSize: '0.82rem',
-                    width: '380px',
-                    backgroundColor: 'var(--bg-main)',
+                    fontWeight: 500,
+                    width: '360px',
+                    backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.25)' : '#f8fafc',
                     color: 'var(--text-dark)',
-                    transition: 'border-color 0.2s'
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSearchFocused ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : 'none',
+                    borderColor: isSearchFocused ? '#059669' : 'rgba(16, 185, 129, 0.22)'
                   }} 
                 />
+                <span style={{ 
+                  position: 'absolute', 
+                  right: '10px', 
+                  fontSize: '0.66rem', 
+                  fontWeight: 700, 
+                  color: '#059669', 
+                  backgroundColor: '#e6f4ea', 
+                  padding: '2px 6px', 
+                  borderRadius: '6px', 
+                  pointerEvents: 'none',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  letterSpacing: '0.02em'
+                }}>
+                  ⌘K
+                </span>
               
               {/* Search Results Dropdown */}
               {isSearchFocused && globalSearchQuery.trim() !== "" && (
                 <div style={{
-                  position: 'absolute', top: '110%', left: 0, width: '380px', backgroundColor: 'var(--bg-card)',
-                  borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid var(--border-light)',
+                  position: 'absolute', top: '115%', left: 0, width: '380px', backgroundColor: 'var(--bg-card)',
+                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.12)', border: '1px solid rgba(16, 185, 129, 0.2)',
                   zIndex: 200, overflow: 'hidden'
                 }}>
                   {getSearchResults().length > 0 ? (
@@ -7480,19 +7892,19 @@ export default function App() {
                       <div 
                         key={i} 
                         onMouseDown={(e) => {
-                          e.preventDefault(); // Prevent input onBlur from firing first
+                          e.preventDefault();
                           handleSearchResultClick(res);
                         }}
-                        style={{ padding: '0.65rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}
+                        style={{ padding: '0.7rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'background-color 0.15s' }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e6f4ea'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)' }}>{res.label}</span>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{res.category}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark)' }}>{res.label}</span>
+                        <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600 }}>{res.category}</span>
                       </div>
                     ))
                   ) : (
-                    <div style={{ padding: '0.8rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    <div style={{ padding: '0.9rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                       Tidak ada hasil yang sesuai
                     </div>
                   )}
@@ -7502,29 +7914,49 @@ export default function App() {
             )}
           </div>
 
-
           {/* Global Actions (Right Side) */}
-          <div className="header-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', position: 'relative' }}>
+          <div className="header-right-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative' }}>
             
             {/* Notification Bell */}
             <div style={{ position: 'relative' }}>
                <button 
                  onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false); }} 
                  style={{ 
-                   background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                   color: showNotifications ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem'
+                   width: '38px',
+                   height: '38px',
+                   borderRadius: '12px',
+                   backgroundColor: showNotifications ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                   border: `1px solid ${showNotifications ? '#10b981' : 'rgba(16, 185, 129, 0.18)'}`,
+                   display: 'flex', 
+                   alignItems: 'center', 
+                   justifyContent: 'center',
+                   color: showNotifications ? '#0d5c3a' : '#059669', 
+                   cursor: 'pointer', 
+                   transition: 'all 0.2s ease',
+                   boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                 }}
+                 onMouseOver={e => {
+                   e.currentTarget.style.backgroundColor = '#e6f4ea';
+                   e.currentTarget.style.borderColor = '#10b981';
+                   e.currentTarget.style.transform = 'translateY(-1px)';
+                 }}
+                 onMouseOut={e => {
+                   e.currentTarget.style.backgroundColor = showNotifications ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                   e.currentTarget.style.borderColor = showNotifications ? '#10b981' : 'rgba(16, 185, 129, 0.18)';
+                   e.currentTarget.style.transform = 'none';
                  }}
                  title="Notifikasi"
                >
-                 <Bell size={20} />
+                 <Bell size={18} />
                </button>
                {incomingLetters.filter(l => l.status === 'baru').length > 0 && (
                 <span style={{ 
-                  position: 'absolute', top: '1px', right: '3px', 
-                  minWidth: '15px', height: '15px', backgroundColor: 'var(--danger)', 
+                  position: 'absolute', top: '-3px', right: '-3px', 
+                  minWidth: '17px', height: '17px', backgroundColor: '#ef4444', 
                   borderRadius: '10px', border: '2px solid var(--bg-card)',
-                  color: '#fff', fontSize: '0.6rem', fontWeight: 800,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px'
+                  color: '#fff', fontSize: '0.62rem', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+                  boxShadow: '0 2px 6px rgba(239,68,68,0.35)'
                 }}>
                   {incomingLetters.filter(l => l.status === 'baru').length}
                 </span>
@@ -7533,21 +7965,24 @@ export default function App() {
                {/* Notifications Dropdown Panel */}
                {showNotifications && (
                  <div style={{
-                   position: 'absolute', right: 0, top: '40px', width: '320px', backgroundColor: 'var(--bg-card)',
-                   borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid var(--border)',
+                   position: 'absolute', right: 0, top: '48px', width: '320px', backgroundColor: 'var(--bg-card)',
+                   borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.15)', border: '1px solid rgba(16, 185, 129, 0.2)',
                    zIndex: 100, overflow: 'hidden'
                  }}>
                    <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-main)' }}>
-                     <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Notifikasi Terkini</span>
-                     <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>{activityLogs.length} Baru</span>
+                     <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>Notifikasi Terkini</span>
+                     <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, backgroundColor: '#e6f4ea', padding: '2px 8px', borderRadius: '12px' }}>{activityLogs.length} Baru</span>
                    </div>
                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                      {activityLogs.slice(0, 5).map((log, index) => (
-                       <div key={index} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer' }}>
-                         <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '0.15rem' }}>{log.action}</div>
-                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{log.details}</div>
-                         <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                           <Clock size={12} /> {log.time}
+                       <div key={index} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background-color 0.15s' }}
+                         onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                         onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                       >
+                         <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '0.15rem' }}>{log.action}</div>
+                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.details}</div>
+                         <div style={{ fontSize: '0.68rem', color: '#059669', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                           <Clock size={11} /> {log.time}
                          </div>
                        </div>
                      ))}
@@ -7563,84 +7998,151 @@ export default function App() {
             <button 
               onClick={toggleTheme} 
               style={{ 
-                background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', transition: 'color 0.2s'
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                border: '1px solid rgba(16, 185, 129, 0.18)',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: '#059669', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.backgroundColor = '#e6f4ea';
+                e.currentTarget.style.borderColor = '#10b981';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.backgroundColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc';
+                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.18)';
+                e.currentTarget.style.transform = 'none';
               }}
               title={theme === 'light' ? "Mode Gelap" : "Mode Terang"}
             >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
             {/* Settings Gear Icon */}
             <button 
               onClick={() => setActiveMenu('settings')} 
-              style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem' }}
+              style={{ 
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                backgroundColor: activeMenu === 'settings' ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                border: `1px solid ${activeMenu === 'settings' ? '#10b981' : 'rgba(16, 185, 129, 0.18)'}`,
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                color: '#059669', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.backgroundColor = '#e6f4ea';
+                e.currentTarget.style.borderColor = '#10b981';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.backgroundColor = activeMenu === 'settings' ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                e.currentTarget.style.borderColor = activeMenu === 'settings' ? '#10b981' : 'rgba(16, 185, 129, 0.18)';
+                e.currentTarget.style.transform = 'none';
+              }}
               title="Pengaturan"
             >
-              <Settings size={20} />
+              <Settings size={18} />
             </button>
 
-            {/* Profile Avatar Image */}
-            <div style={{ position: 'relative', marginLeft: '0.5rem' }}>
+            {/* Subtle Divider */}
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(16, 185, 129, 0.2)', margin: '0 0.15rem' }} />
+
+            {/* Profile Pill Card */}
+            <div style={{ position: 'relative' }}>
               <div 
                 onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}
                 style={{ 
-                  display: 'flex', alignItems: 'center', gap: '0.65rem',
-                  cursor: 'pointer', padding: '0.2rem 0.4rem', borderRadius: '10px',
-                  border: '1px solid transparent',
-                  transition: 'border-color 0.2s ease',
-                  backgroundColor: 'transparent'
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.65rem',
+                  cursor: 'pointer', 
+                  padding: '0.28rem 0.75rem 0.28rem 0.4rem', 
+                  borderRadius: '14px',
+                  border: `1px solid ${showProfileMenu ? '#059669' : 'rgba(16, 185, 129, 0.2)'}`,
+                  backgroundColor: showProfileMenu ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--border-light)'}
-                onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#059669';
+                  e.currentTarget.style.backgroundColor = '#e6f4ea';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = showProfileMenu ? '#059669' : 'rgba(16, 185, 129, 0.2)';
+                  e.currentTarget.style.backgroundColor = showProfileMenu ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                  e.currentTarget.style.transform = 'none';
+                }}
                 title={`Profil ${currentUser?.name || 'Pengguna'}`}
               >
-                <div className="header-user-text" style={{ textAlign: 'right', display: sidebarCollapsed ? 'none' : 'block' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-dark)', lineHeight: 1.2 }}>
-                    {currentUser?.name || 'Administrator'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600 }}>
-                    {currentUser?.role || 'Admin'}
-                  </div>
-                </div>
+                {/* Modern Avatar Squircle */}
                 <div 
                   style={{ 
-                    width: '32px', height: '32px', borderRadius: '50%', 
-                    overflow: 'hidden', border: '1.5px solid var(--border-light)',
-                    backgroundColor: currentUser?.avatarColor || 'var(--primary)',
-                    color: '#fff',
+                    width: '34px', height: '34px', borderRadius: '10px', 
+                    background: 'linear-gradient(135deg, #0d5c3a 0%, #10b981 100%)',
+                    color: '#ffffff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '0.82rem',
-                    flexShrink: 0
+                    fontWeight: 800, fontSize: '0.82rem',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(13, 92, 58, 0.25)'
                   }}
                 >
                   {currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() : 'AD'}
                 </div>
+
+                <div className="header-user-text" style={{ textAlign: 'left', display: sidebarCollapsed ? 'none' : 'block' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-dark)', lineHeight: 1.2, fontFamily: 'Outfit, sans-serif' }}>
+                    {currentUser?.name || 'Admin'}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, lineHeight: 1.15 }}>
+                    {currentUser?.role || 'Administrator'}
+                  </div>
+                </div>
+
+                <ChevronDown size={14} style={{ color: '#059669', strokeWidth: 2.2, marginLeft: '0.1rem', transition: 'transform 0.2s', transform: showProfileMenu ? 'rotate(180deg)' : 'none' }} />
               </div>
 
               {/* Profile Dropdown Panel */}
               {showProfileMenu && (
                 <div style={{
-                  position: 'absolute', right: 0, top: '45px', width: '250px', backgroundColor: 'var(--bg-card)',
-                  borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid var(--border)',
+                  position: 'absolute', right: 0, top: '48px', width: '250px', backgroundColor: 'var(--bg-card)',
+                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.15)', border: '1px solid rgba(16, 185, 129, 0.2)',
                   zIndex: 100, overflow: 'hidden', padding: '0.5rem 0'
                 }}>
                   <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{currentUser?.name || 'Administrator'}</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', marginTop: '2px' }}>{currentUser?.role || 'Pengguna'}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{currentUser?.email || (currentUser?.username === 'admin' ? 'kbaiturrahmangarut@gmail.com' : `${currentUser?.username || 'admin'}@klinikbaiturrahman.com`)}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>{currentUser?.name || 'Admin'}</div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#059669', marginTop: '2px' }}>{currentUser?.role || 'Administrator'}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{currentUser?.email || (currentUser?.username === 'admin' ? 'kbaiturrahmangarut@gmail.com' : `${currentUser?.username || 'admin'}@klinikbaiturrahman.com`)}</div>
                   </div>
                   <button 
                     onClick={() => { setActiveMenu("settings"); setShowProfileMenu(false); }}
-                    style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'background-color 0.15s' }}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <Settings size={16} /> Pengaturan Sistem
+                    <Settings size={15} color="#059669" /> Pengaturan Sistem
                   </button>
                   <button 
                     onClick={() => { handleLogout(); setShowProfileMenu(false); }}
-                    style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'background-color 0.15s' }}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <LogOut size={16} /> Ganti Akun / Keluar
+                    <LogOut size={15} /> Ganti Akun / Keluar
                   </button>
                 </div>
               )}
@@ -7711,9 +8213,9 @@ export default function App() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Surat Masuk</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{incomingLetters.length || 2}</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{letterTypeDistribution.inCount}</div>
                         <div style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '1px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span>↑</span> 1 kemarin
+                          <span>●</span> Total Terdata
                         </div>
                       </div>
                       <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
@@ -7745,9 +8247,9 @@ export default function App() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Surat Keluar</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{outgoingLetters.length || 5}</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1.1 }}>{letterTypeDistribution.outCount}</div>
                         <div style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700, marginTop: '1px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span>↑</span> 2 kemarin
+                          <span>●</span> Total Terdata
                         </div>
                       </div>
                       <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
@@ -7815,7 +8317,7 @@ export default function App() {
 
 
               {/* 2. Main 2-Column Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.95fr) minmax(0, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.95fr) minmax(0, 1fr)', gap: '1.25rem', alignItems: 'stretch' }}>
                 
                 {/* LEFT COLUMN: Aktivitas Surat + (Jenis Surat & Kategori Surat) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -7824,12 +8326,14 @@ export default function App() {
                   <div style={{
                     backgroundColor: 'var(--bg-card)',
                     borderRadius: '20px',
-                    padding: '1.5rem',
+                    padding: '1.4rem',
                     border: '1px solid var(--border-light)',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem'
+                    height: '335px',
+                    boxSizing: 'border-box',
+                    gap: '0.65rem'
                   }}>
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -7873,7 +8377,7 @@ export default function App() {
                     </div>
 
                     {/* Legend Row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem', fontWeight: 600, margin: '0.1rem 0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dark)' }}>
                         <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0d5c3a' }} />
                         <span>Surat Masuk</span>
@@ -7885,37 +8389,11 @@ export default function App() {
                     </div>
 
                     {/* Area / Spline Chart */}
-                    <div style={{ width: '100%', height: '240px', position: 'relative' }}>
-                      {/* Fixed Tooltip Badge from Mockup at 23 Okt */}
-                      <div style={{
-                        position: 'absolute',
-                        right: '16px',
-                        top: '50px',
-                        backgroundColor: 'var(--bg-card)',
-                        borderRadius: '10px',
-                        padding: '0.45rem 0.8rem',
-                        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-                        border: '1px solid var(--border-light)',
-                        zIndex: 10,
-                        pointerEvents: 'none',
-                        lineHeight: 1.35
-                      }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.74rem', color: 'var(--text-dark)', marginBottom: '2px' }}>23 Okt</div>
-                        <div style={{ fontSize: '0.7rem', color: '#0d5c3a', fontWeight: 700 }}>Masuk : {incomingLetters.length || 2}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: 700 }}>Keluar : {outgoingLetters.length || 5}</div>
-                      </div>
+                    <div style={{ width: '100%', flex: 1, minHeight: '170px', position: 'relative' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
-                          data={[
-                            { date: '17 Okt', Masuk: 2, Keluar: 6 },
-                            { date: '18 Okt', Masuk: 5, Keluar: 8 },
-                            { date: '19 Okt', Masuk: 6, Keluar: 10 },
-                            { date: '20 Okt', Masuk: 5, Keluar: 8 },
-                            { date: '21 Okt', Masuk: 14, Keluar: 8 },
-                            { date: '22 Okt', Masuk: 8, Keluar: 5 },
-                            { date: '23 Okt', Masuk: incomingLetters.length || 2, Keluar: outgoingLetters.length || 5 },
-                          ]}
-                          margin={{ top: 15, right: 15, left: -25, bottom: 0 }}
+                          data={activityChartData}
+                          margin={{ top: 12, right: 15, left: -25, bottom: 0 }}
                         >
                           <defs>
                             <linearGradient id="colorMasukGrad" x1="0" y1="0" x2="0" y2="1">
@@ -7928,11 +8406,27 @@ export default function App() {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" opacity={0.6} />
-                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} dy={8} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} domain={[0, 20]} ticks={[0, 5, 10, 15, 20]} />
+                          <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }}
+                            dy={8}
+                            interval={dashboardRange === '30d' ? 4 : 0}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }}
+                            domain={[0, maxChartValue]}
+                            allowDecimals={false}
+                          />
                           <Tooltip
                             content={({ active, payload, label }) => {
                               if (active && payload && payload.length) {
+                                const item = payload[0]?.payload;
+                                const masukVal = payload.find(p => p.dataKey === 'Masuk')?.value ?? 0;
+                                const keluarVal = payload.find(p => p.dataKey === 'Keluar')?.value ?? 0;
                                 return (
                                   <div style={{
                                     backgroundColor: 'var(--bg-card)',
@@ -7943,13 +8437,13 @@ export default function App() {
                                     fontSize: '0.78rem'
                                   }}>
                                     <div style={{ fontWeight: 800, color: 'var(--text-dark)', marginBottom: '0.35rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.2rem' }}>
-                                      {label}
+                                      {item?.rangeLabel || label}
                                     </div>
                                     <div style={{ color: '#0d5c3a', fontWeight: 700, display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
-                                      <span>Masuk :</span> <span>{payload.find(p => p.dataKey === 'Masuk')?.value ?? 0}</span>
+                                      <span>Masuk :</span> <span>{masukVal}</span>
                                     </div>
                                     <div style={{ color: '#0284c7', fontWeight: 700, display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
-                                      <span>Keluar :</span> <span>{payload.find(p => p.dataKey === 'Keluar')?.value ?? 0}</span>
+                                      <span>Keluar :</span> <span>{keluarVal}</span>
                                     </div>
                                   </div>
                                 );
@@ -8006,16 +8500,26 @@ export default function App() {
                           <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
                             {/* Background circle */}
                             <circle cx="18" cy="18" r="14" fill="none" stroke="var(--bg-main)" strokeWidth="4.5" />
-                            {/* Surat Masuk arc (29%) */}
-                            <circle
-                              cx="18" cy="18" r="14" fill="none" stroke="#0d5c3a" strokeWidth="4.5"
-                              strokeDasharray="29 100" strokeDashoffset="0" strokeLinecap="round"
-                            />
-                            {/* Surat Keluar arc (71%) */}
-                            <circle
-                              cx="18" cy="18" r="14" fill="none" stroke="#14b8a6" strokeWidth="4.5"
-                              strokeDasharray="71 100" strokeDashoffset="-29" strokeLinecap="round"
-                            />
+                            {letterTypeDistribution.total > 0 && (
+                              <>
+                                {/* Surat Masuk arc */}
+                                <circle
+                                  cx="18" cy="18" r="14" fill="none" stroke="#0d5c3a" strokeWidth="4.5"
+                                  strokeDasharray={`${letterTypeDistribution.inPercent} 100`}
+                                  strokeDashoffset="0"
+                                  strokeLinecap="round"
+                                  pathLength="100"
+                                />
+                                {/* Surat Keluar arc */}
+                                <circle
+                                  cx="18" cy="18" r="14" fill="none" stroke="#14b8a6" strokeWidth="4.5"
+                                  strokeDasharray={`${letterTypeDistribution.outPercent} 100`}
+                                  strokeDashoffset={-letterTypeDistribution.inPercent}
+                                  strokeLinecap="round"
+                                  pathLength="100"
+                                />
+                              </>
+                            )}
                           </svg>
                           <div style={{
                             position: 'absolute', inset: 0,
@@ -8024,7 +8528,7 @@ export default function App() {
                             pointerEvents: 'none'
                           }}>
                             <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)', lineHeight: 1 }}>
-                              {incomingLetters.length + outgoingLetters.length || 7}
+                              {letterTypeDistribution.total}
                             </span>
                             <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total</span>
                           </div>
@@ -8035,12 +8539,12 @@ export default function App() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0d5c3a', flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-muted)', flex: 1 }}>Surat Masuk</span>
-                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{incomingLetters.length || 2} (29%)</strong>
+                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{letterTypeDistribution.inCount} ({letterTypeDistribution.inPercent}%)</strong>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#14b8a6', flexShrink: 0 }} />
                             <span style={{ color: 'var(--text-muted)', flex: 1 }}>Surat Keluar</span>
-                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{outgoingLetters.length || 5} (71%)</strong>
+                            <strong style={{ color: 'var(--text-dark)', marginLeft: '0.5rem' }}>{letterTypeDistribution.outCount} ({letterTypeDistribution.outPercent}%)</strong>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8', flexShrink: 0 }} />
@@ -8067,19 +8571,14 @@ export default function App() {
                       </h4>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.2rem' }}>
-                        {[
-                          { label: 'Surat Dinas', icon: Building2, count: 3, percent: 43 },
-                          { label: 'Surat Tugas', icon: FileText, count: 2, percent: 29 },
-                          { label: 'Surat Keterangan', icon: ClipboardList, count: 1, percent: 14 },
-                          { label: 'Lainnya', icon: FolderArchive, count: 1, percent: 14 }
-                        ].map((cat, idx) => {
+                        {letterCategoriesDistribution.map((cat, idx) => {
                           const IconComp = cat.icon;
                           return (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                               <div style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: '#e6f4ea', color: '#0d5c3a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <IconComp size={13} />
                               </div>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)', width: '105px', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)', width: '110px', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {cat.label}
                               </div>
                               <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
@@ -8108,7 +8607,10 @@ export default function App() {
                     boxShadow: '0 2px 12px rgba(0,0,0,0.03)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.9rem'
+                    height: '335px',
+                    boxSizing: 'border-box',
+                    justifyContent: 'space-between',
+                    gap: '0.85rem'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -8126,7 +8628,7 @@ export default function App() {
                     </div>
 
                     {/* List */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', flex: 1, justifyContent: 'space-around' }}>
                       {[
                         { icon: Mail, bg: '#e6f4ea', color: '#0d5c3a', title: 'Surat Masuk', desc: 'Surat dari Dinas Kesehatan', time: '10:24', dot: '#10b981' },
                         { icon: FileText, bg: '#e0f2fe', color: '#0284c7', title: 'Surat Keluar', desc: 'Surat Tugas No. 003/SM/2026', time: '09:15', dot: '#10b981' },

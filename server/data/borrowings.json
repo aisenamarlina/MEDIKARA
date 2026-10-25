@@ -30,5 +30,16 @@
     "conditionIn": "",
     "status": "Selesai",
     "notes": ""
+  },
+  {
+    "id": "PMJ-001/VIII/2026",
+    "qty": 1,
+    "date": "2026-08-20",
+    "notes": "Untuk acara penyuluhan kesehatan",
+    "status": "Dipinjam",
+    "borrower": "Humas & Promkes",
+    "itemCode": "B-8853",
+    "itemName": "TV Monitor 32 Inch",
+    "returnDate": "2026-08-28"
   }
 ]

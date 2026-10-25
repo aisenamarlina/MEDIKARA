@@ -34,5 +34,41 @@
     "price": 55000,
     "officer": "Admin",
     "notes": "Restock bulanan"
+  },
+  {
+    "id": "BM-012/VIII/2026",
+    "qty": 1,
+    "date": "2026-08-26",
+    "unit": "Unit",
+    "notes": "Pengadaan baru",
+    "price": 2100000,
+    "source": "Vendor Elektronik",
+    "officer": "Admin Gudang",
+    "itemCode": "B-8853",
+    "itemName": "TV Monitor 32 Inch"
+  },
+  {
+    "id": "BM-011/VIII/2026",
+    "qty": 5,
+    "date": "2026-08-26",
+    "unit": "Set",
+    "notes": "Restock kebersihan",
+    "price": 150000,
+    "source": "Toko Perkakas Garut",
+    "officer": "Admin Gudang",
+    "itemCode": "B-7712",
+    "itemName": "Sapu & Alat Pel Lantai"
+  },
+  {
+    "id": "BM-010/VIII/2026",
+    "qty": 2,
+    "date": "2026-08-25",
+    "unit": "Unit",
+    "notes": "Unit cadangan",
+    "price": 850000,
+    "source": "Mitra IT",
+    "officer": "Admin Gudang",
+    "itemCode": "B-2035",
+    "itemName": "Printer Thermal Kasir"
   }
 ]

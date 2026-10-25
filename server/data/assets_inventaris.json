@@ -19,5 +19,53 @@
     "satuanUmurEkonomis": "Tahun",
     "nilaiResidu": 0,
     "fotoAset": null
+  },
+  {
+    "id": "3-2-12-106-2",
+    "lokasi": "RUANG ASMAN ADUM DAN KERUMAH TANGGA",
+    "satuan": "Unit",
+    "kondisi": "Baik",
+    "category": "Barang/Benda",
+    "namaAset": "Kursi chitose Staff",
+    "pemegang": "NANANG ALAMSYAH, ST",
+    "jenisAset": "Furniture",
+    "keterangan": "MEUBEL",
+    "portability": [
+      "Tidak mudah dibawa"
+    ],
+    "hargaPerUnit": 350000,
+    "tanggalPerolehan": "2023-12-31"
+  },
+  {
+    "id": "3-2-16-106-2",
+    "lokasi": "RUANG ASMAN ADUM DAN KERUMAH TANGGA",
+    "satuan": "Unit",
+    "kondisi": "Rusak Ringan",
+    "category": "Barang/Benda",
+    "namaAset": "Laci Dokumen 3 Pintu",
+    "pemegang": "NANANG ALAMSYAH, ST",
+    "jenisAset": "Furniture",
+    "keterangan": "MEUBEL",
+    "portability": [
+      "Tidak mudah dibawa"
+    ],
+    "hargaPerUnit": 600000,
+    "tanggalPerolehan": "2023-12-31"
+  },
+  {
+    "id": "3-22-18-106-2",
+    "lokasi": "RUANG ASMAN ADUM DAN KERUMAH TANGGA",
+    "satuan": "Unit",
+    "kondisi": "Baik",
+    "category": "Barang/Benda",
+    "namaAset": "Lemari 4 Tahap Stainles \"BROTHER\"",
+    "pemegang": "NANANG ALAMSYAH, ST",
+    "jenisAset": "Furniture",
+    "keterangan": "MEUBEL",
+    "portability": [
+      "Tidak mudah dibawa"
+    ],
+    "hargaPerUnit": 2450000,
+    "tanggalPerolehan": "2023-12-31"
   }
 ]
