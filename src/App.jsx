@@ -1005,21 +1005,29 @@ export default function App() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
     if (file.size > 30 * 1024 * 1024) {
+      setArchiveForm(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileSize: `${sizeMb} MB`,
+        fileData: null,
+        fileTooLarge: true
+      }));
       window.dispatchEvent(new CustomEvent('app-toast', { 
-        detail: { message: "Ukuran berkas melebihi batas maksimal 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+        detail: { message: `Berkas TIDAK TERSIMPAN! Ukuran file terlalu besar (${sizeMb} MB). Batas maksimal adalah 30 MB.`, type: 'error' } 
       }));
       e.target.value = '';
       return;
     }
     const reader = new FileReader();
     reader.onload = (event) => {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
       setArchiveForm(prev => ({
         ...prev,
         fileName: file.name,
         fileSize: `${sizeMb} MB`,
-        fileData: event.target.result
+        fileData: event.target.result,
+        fileTooLarge: false
       }));
     };
     reader.readAsDataURL(file);
@@ -1028,21 +1036,29 @@ export default function App() {
   const handleIncomingFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
     if (file.size > 30 * 1024 * 1024) {
+      setIncomingForm(prev => ({
+        ...prev,
+        fileName: file.name,
+        fileSize: `${sizeMb} MB`,
+        fileData: null,
+        fileTooLarge: true
+      }));
       window.dispatchEvent(new CustomEvent('app-toast', { 
-        detail: { message: "Ukuran berkas melebihi batas maksimal 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
+        detail: { message: `Berkas TIDAK TERSIMPAN! Ukuran file terlalu besar (${sizeMb} MB). Batas maksimal adalah 30 MB.`, type: 'error' } 
       }));
       e.target.value = '';
       return;
     }
     const reader = new FileReader();
     reader.onload = (event) => {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
       setIncomingForm(prev => ({
         ...prev,
         fileName: file.name,
         fileSize: `${sizeMb} MB`,
-        fileData: event.target.result
+        fileData: event.target.result,
+        fileTooLarge: false
       }));
     };
     reader.readAsDataURL(file);
@@ -1108,15 +1124,31 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Harap isi judul dokumen!", type: 'error' } }));
       return;
     }
+    if (archiveForm.fileTooLarge) {
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: `Berkas TIDAK TERSIMPAN! Ukuran file (${archiveForm.fileSize || 'terlalu besar'}) melebihi batas maksimal 30 MB.`, type: 'error' } 
+      }));
+      return;
+    }
     openConfirm("Apakah Anda yakin ingin mengunggah dan menyimpan dokumen ini?", async () => {
       const docId = "AR-" + Date.now();
       const fileData = archiveForm.fileData || null;
 
       if (fileData) {
         try {
-          await saveFileToStorage(docId, fileData, archiveForm.fileName || `${archiveForm.title}.pdf`);
+          const saved = await saveFileToStorage(docId, fileData, archiveForm.fileName || `${archiveForm.title}.pdf`);
+          if (!saved) {
+            window.dispatchEvent(new CustomEvent('app-toast', { 
+              detail: { message: "Peringatan: Berkas TIDAK TERSIMPAN! Ukuran file terlalu besar atau memori browser penuh.", type: 'error' } 
+            }));
+            return;
+          }
         } catch (err) {
           console.error('[MEDIKARA] Gagal simpan file ke IndexedDB:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: "Berkas TIDAK TERSIMPAN! Terjadi kesalahan saat menyimpan berkas.", type: 'error' } 
+          }));
+          return;
         }
       }
 
@@ -1184,13 +1216,30 @@ export default function App() {
       return;
     }
 
+    if (archiveEditModal.data.fileTooLarge) {
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: `Berkas baru TIDAK TERSIMPAN! Ukuran file (${archiveEditModal.data.size || 'terlalu besar'}) melebihi batas 30 MB.`, type: 'error' } 
+      }));
+      return;
+    }
+
     const updatedDoc = { ...archiveEditModal.data };
 
     if (updatedDoc.fileData) {
       try {
-        await saveFileToStorage(updatedDoc.id, updatedDoc.fileData, updatedDoc.fileName || `${updatedDoc.title}.pdf`);
+        const saved = await saveFileToStorage(updatedDoc.id, updatedDoc.fileData, updatedDoc.fileName || `${updatedDoc.title}.pdf`);
+        if (!saved) {
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: "Peringatan: Berkas TIDAK TERSIMPAN! Ukuran file terlalu besar atau memori tidak mencukupi.", type: 'error' } 
+          }));
+          return;
+        }
       } catch (err) {
         console.error('[MEDIKARA] Gagal simpan pembaruan berkas ke IndexedDB:', err);
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: "Berkas TIDAK TERSIMPAN! Terjadi kesalahan saat menyimpan berkas.", type: 'error' } 
+        }));
+        return;
       }
     }
 
@@ -1791,15 +1840,31 @@ export default function App() {
   const [incomingForm, setIncomingForm] = useState({ refNo: "", sender: "", subject: "", disposition: "", date: new Date().toISOString().split('T')[0], fileName: "", fileSize: "", fileData: null });
   const handleAddIncomingLetter = (e) => {
     e.preventDefault();
+    if (incomingForm.fileTooLarge) {
+      window.dispatchEvent(new CustomEvent('app-toast', { 
+        detail: { message: `Berkas surat TIDAK TERSIMPAN! Ukuran file (${incomingForm.fileSize || 'terlalu besar'}) melebihi batas maksimal 30 MB.`, type: 'error' } 
+      }));
+      return;
+    }
     openConfirm("Apakah Anda yakin ingin menambahkan Surat Masuk ini?", async () => {
       const letterId = "SM-" + Date.now();
       const fileData = incomingForm.fileData || null;
 
       if (fileData) {
         try {
-          await saveFileToStorage(letterId, fileData, incomingForm.fileName || "surat_masuk.pdf");
+          const saved = await saveFileToStorage(letterId, fileData, incomingForm.fileName || "surat_masuk.pdf");
+          if (!saved) {
+            window.dispatchEvent(new CustomEvent('app-toast', { 
+              detail: { message: "Peringatan: Berkas surat masuk TIDAK TERSIMPAN! Ukuran file terlalu besar atau memori tidak mencukupi.", type: 'error' } 
+            }));
+            return;
+          }
         } catch (err) {
           console.error('[MEDIKARA] Gagal simpan file surat masuk ke IndexedDB:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: "Berkas TIDAK TERSIMPAN! Terjadi kesalahan saat menyimpan berkas.", type: 'error' } 
+          }));
+          return;
         }
       }
 
@@ -2211,11 +2276,27 @@ export default function App() {
     e.preventDefault();
     const { type, data } = letterModal;
     if (type === "in") {
+      if (data.fileTooLarge) {
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: `Berkas baru TIDAK TERSIMPAN! Ukuran file (${data.fileSize || 'terlalu besar'}) melebihi batas 30 MB.`, type: 'error' } 
+        }));
+        return;
+      }
       if (data.fileData) {
         try {
-          await saveFileToStorage(data.id, data.fileData, data.fileName || "surat_masuk.pdf");
+          const saved = await saveFileToStorage(data.id, data.fileData, data.fileName || "surat_masuk.pdf");
+          if (!saved) {
+            window.dispatchEvent(new CustomEvent('app-toast', { 
+              detail: { message: "Peringatan: Berkas surat masuk TIDAK TERSIMPAN! Ukuran file terlalu besar.", type: 'error' } 
+            }));
+            return;
+          }
         } catch (err) {
           console.error('[MEDIKARA] Gagal simpan file edit surat masuk:', err);
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: "Berkas TIDAK TERSIMPAN! Terjadi kesalahan saat menyimpan berkas.", type: 'error' } 
+          }));
+          return;
         }
       }
       const dataToSave = {
@@ -8835,11 +8916,15 @@ export default function App() {
                         className="input-field" 
                         style={{ padding: '0.4rem' }}
                       />
-                      {archiveForm.fileName && (
+                      {archiveForm.fileTooLarge ? (
+                        <div style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 700, marginTop: '0.35rem', backgroundColor: '#fee2e2', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                          ⛔ Berkas TIDAK TERSIMPAN: Ukuran file ({archiveForm.fileSize}) terlalu besar! Batas maksimal adalah 30 MB.
+                        </div>
+                      ) : archiveForm.fileName ? (
                         <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.25rem' }}>
                           ✓ Berkas terpilih: {archiveForm.fileName} ({archiveForm.fileSize})
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -9192,11 +9277,15 @@ export default function App() {
                       className="input-field" 
                       style={{ padding: '0.4rem' }}
                     />
-                    {incomingForm.fileName && (
+                    {incomingForm.fileTooLarge ? (
+                      <div style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 700, marginTop: '0.35rem', backgroundColor: '#fee2e2', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                        ⛔ Berkas TIDAK TERSIMPAN: Ukuran file ({incomingForm.fileSize}) terlalu besar! Batas maksimal adalah 30 MB.
+                      </div>
+                    ) : incomingForm.fileName ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.25rem' }}>
                         ✓ Berkas terpilih: {incomingForm.fileName} ({incomingForm.fileSize})
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   <button type="submit" className="btn-primary" style={{ padding: '0.85rem', marginTop: '0.5rem' }}>
                     Tambah Surat Masuk
@@ -10817,23 +10906,34 @@ export default function App() {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
+                          const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
                           if (file.size > 30 * 1024 * 1024) {
-                            window.dispatchEvent(new CustomEvent('app-toast', { 
-                              detail: { message: "Ukuran berkas melebihi batas 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
-                            }));
-                            e.target.value = '';
-                            return;
-                          }
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
                             setLetterModal(prev => ({
                               ...prev,
                               data: {
                                 ...prev.data,
                                 fileName: file.name,
                                 fileSize: `${sizeMb} MB`,
-                                fileData: event.target.result
+                                fileData: null,
+                                fileTooLarge: true
+                              }
+                            }));
+                            window.dispatchEvent(new CustomEvent('app-toast', { 
+                              detail: { message: `Berkas baru TIDAK TERSIMPAN! Ukuran file terlalu besar (${sizeMb} MB). Batas maksimal adalah 30 MB.`, type: 'error' } 
+                            }));
+                            e.target.value = '';
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setLetterModal(prev => ({
+                              ...prev,
+                              data: {
+                                ...prev.data,
+                                fileName: file.name,
+                                fileSize: `${sizeMb} MB`,
+                                fileData: event.target.result,
+                                fileTooLarge: false
                               }
                             }));
                           };
@@ -10843,11 +10943,15 @@ export default function App() {
                       className="input-field" 
                       style={{ padding: '0.4rem' }}
                     />
-                    {letterModal.data.fileName && (
+                    {letterModal.data.fileTooLarge ? (
+                      <div style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 700, marginTop: '0.35rem', backgroundColor: '#fee2e2', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                        ⛔ Berkas TIDAK TERSIMPAN: Ukuran file ({letterModal.data.fileSize}) terlalu besar! Batas maksimal adalah 30 MB.
+                      </div>
+                    ) : letterModal.data.fileName ? (
                       <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.25rem' }}>
                         ✓ Berkas terpilih: {letterModal.data.fileName} ({letterModal.data.fileSize})
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </>
               ) : (
@@ -11182,23 +11286,34 @@ export default function App() {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
+                      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
                       if (file.size > 30 * 1024 * 1024) {
-                        window.dispatchEvent(new CustomEvent('app-toast', { 
-                          detail: { message: "Ukuran berkas melebihi batas 30 MB. Silakan pilih berkas yang lebih kecil.", type: 'error' } 
-                        }));
-                        e.target.value = '';
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
                         setArchiveEditModal(prev => ({
                           ...prev,
                           data: {
                             ...prev.data,
                             fileName: file.name,
                             size: `${sizeMb} MB`,
-                            fileData: event.target.result
+                            fileData: null,
+                            fileTooLarge: true
+                          }
+                        }));
+                        window.dispatchEvent(new CustomEvent('app-toast', { 
+                          detail: { message: `Berkas baru TIDAK TERSIMPAN! Ukuran file terlalu besar (${sizeMb} MB). Batas maksimal adalah 30 MB.`, type: 'error' } 
+                        }));
+                        e.target.value = '';
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setArchiveEditModal(prev => ({
+                          ...prev,
+                          data: {
+                            ...prev.data,
+                            fileName: file.name,
+                            size: `${sizeMb} MB`,
+                            fileData: event.target.result,
+                            fileTooLarge: false
                           }
                         }));
                       };
@@ -11208,12 +11323,16 @@ export default function App() {
                   className="input-field" 
                   style={{ padding: '0.4rem' }}
                 />
-                {archiveEditModal.data.fileName && (
+                {archiveEditModal.data.fileTooLarge ? (
+                  <div style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 700, marginTop: '0.35rem', backgroundColor: '#fee2e2', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                    ⛔ Berkas TIDAK TERSIMPAN: Ukuran file ({archiveEditModal.data.size}) terlalu besar! Batas maksimal adalah 30 MB.
+                  </div>
+                ) : archiveEditModal.data.fileName ? (
                   <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <File size={13} />
                     <span>Berkas aktif: {archiveEditModal.data.fileName} ({archiveEditModal.data.size || '1.2 MB'})</span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div>
