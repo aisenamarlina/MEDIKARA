@@ -101,7 +101,7 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       }));
       handleClosePinModal();
     } else {
-      setPinError('PIN salah! Silakan coba lagi (PIN: 21721)');
+      setPinError('PIN salah! Silakan coba lagi.');
     }
   };
 
