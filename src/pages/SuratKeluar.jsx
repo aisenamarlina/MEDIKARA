@@ -537,7 +537,44 @@ const SuratKeluar = ({
 }) => {
   const [dynamicFields, setDynamicFields] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterUnit, setFilterUnit] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+
+  const getLetterTypeInfo = (letter) => {
+    if (!letter) return { code: 'unknown', name: 'Surat Lain-lain' };
+    if (letter.typeCode) {
+      const found = (letterTypes || []).find(t => t.code === letter.typeCode);
+      if (found) return { code: found.code, name: found.name };
+      return { code: letter.typeCode, name: letter.typeCode };
+    }
+    if (letter.templateType) {
+      const found = (letterTypes || []).find(t => t.name === letter.templateType || t.code === letter.templateType);
+      if (found) return { code: found.code, name: found.name };
+      return { code: letter.templateType, name: letter.templateType };
+    }
+    if (letter.docNo) {
+      const parts = letter.docNo.split('/');
+      if (parts.length >= 2) {
+        const potentialCode = parts[1];
+        const found = (letterTypes || []).find(t => t.code?.toLowerCase() === potentialCode.toLowerCase());
+        if (found) return { code: found.code, name: found.name };
+        return { code: potentialCode, name: potentialCode };
+      }
+    }
+    return { code: 'unknown', name: 'Surat Lain-lain' };
+  };
+
+  // Kategori filter jenis surat dinamis berdasarkan surat yang ada di arsip
+  const availableTypes = useMemo(() => {
+    const map = new Map();
+    (outgoingLetters || []).forEach(l => {
+      const info = getLetterTypeInfo(l);
+      if (!map.has(info.code)) {
+        map.set(info.code, { code: info.code, name: info.name, count: 0 });
+      }
+      map.get(info.code).count += 1;
+    });
+    return Array.from(map.values());
+  }, [outgoingLetters, letterTypes]);
 
   const getLetterUnitInfo = (letter) => {
     if (!letter) return { code: 'unknown', name: 'Lainnya', fullName: 'Lainnya' };
@@ -565,19 +602,6 @@ const SuratKeluar = ({
   const getUnitName = (letter) => {
     return getLetterUnitInfo(letter).fullName;
   };
-
-  // Kategori filter unit dinamis berdasarkan surat yang ada di arsip
-  const availableUnits = useMemo(() => {
-    const map = new Map();
-    (outgoingLetters || []).forEach(l => {
-      const info = getLetterUnitInfo(l);
-      if (!map.has(info.code)) {
-        map.set(info.code, { code: info.code, name: info.name, fullName: info.fullName, count: 0 });
-      }
-      map.get(info.code).count += 1;
-    });
-    return Array.from(map.values());
-  }, [outgoingLetters, unitCodes]);
 
 
   const handleDynamicFieldChange = (key, value) => {
@@ -2440,7 +2464,7 @@ const SuratKeluar = ({
               <div>
                 <h3 style={{ fontWeight: 700, margin: 0, color: 'var(--text-dark)' }}>Arsip Surat Keluar</h3>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Total {outgoingLetters.length} dokumen {filterUnit !== 'all' ? `• Difilter per unit` : ''}
+                  Total {outgoingLetters.length} dokumen {filterType !== 'all' ? `• Difilter per jenis: ${availableTypes.find(t => t.code === filterType)?.name || filterType}` : ''}
                 </div>
               </div>
             </div>
@@ -2459,7 +2483,7 @@ const SuratKeluar = ({
             </div>
           </div>
 
-          {/* Baris Filter Unit Langsung Tinggal Klik */}
+          {/* Baris Filter Jenis Surat Langsung Tinggal Klik */}
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
@@ -2472,15 +2496,15 @@ const SuratKeluar = ({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)' }}>
                 <Filter size={15} style={{ color: 'var(--primary)' }} />
-                <span>Filter Unit Pengeluar:</span>
+                <span>Filter Jenis Surat:</span>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                  (Tinggal klik tombol unit di bawah untuk langsung menyaring arsip)
+                  (Tinggal klik jenis surat di bawah untuk langsung menyaring arsip)
                 </span>
               </div>
-              {filterUnit !== 'all' && (
+              {filterType !== 'all' && (
                 <button
                   type="button"
-                  onClick={() => setFilterUnit('all')}
+                  onClick={() => setFilterType('all')}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -2495,9 +2519,9 @@ const SuratKeluar = ({
                     fontWeight: 600,
                     transition: 'all 0.2s'
                   }}
-                  title="Tampilkan semua unit"
+                  title="Tampilkan semua jenis surat"
                 >
-                  <X size={12} /> Reset Filter ({availableUnits.find(u => u.code === filterUnit)?.name || filterUnit})
+                  <X size={12} /> Reset Filter ({availableTypes.find(t => t.code === filterType)?.name || filterType})
                 </button>
               )}
             </div>
@@ -2507,7 +2531,7 @@ const SuratKeluar = ({
               {/* Tombol Semua Dokumen */}
               <button
                 type="button"
-                onClick={() => setFilterUnit('all')}
+                onClick={() => setFilterType('all')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -2518,33 +2542,33 @@ const SuratKeluar = ({
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  border: filterUnit === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-light)',
-                  backgroundColor: filterUnit === 'all' ? 'var(--primary)' : 'var(--bg-card, #ffffff)',
-                  color: filterUnit === 'all' ? '#ffffff' : 'var(--text-dark)',
-                  boxShadow: filterUnit === 'all' ? '0 2px 6px rgba(13, 148, 136, 0.25)' : 'none'
+                  border: filterType === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-light)',
+                  backgroundColor: filterType === 'all' ? 'var(--primary)' : 'var(--bg-card, #ffffff)',
+                  color: filterType === 'all' ? '#ffffff' : 'var(--text-dark)',
+                  boxShadow: filterType === 'all' ? '0 2px 6px rgba(13, 148, 136, 0.25)' : 'none'
                 }}
               >
-                <span>Semua Unit</span>
+                <span>Semua Jenis</span>
                 <span style={{
                   padding: '0.1rem 0.5rem',
                   borderRadius: '12px',
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  backgroundColor: filterUnit === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-main, #e2e8f0)',
-                  color: filterUnit === 'all' ? '#ffffff' : 'var(--text-dark)'
+                  backgroundColor: filterType === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-main, #e2e8f0)',
+                  color: filterType === 'all' ? '#ffffff' : 'var(--text-dark)'
                 }}>
                   {outgoingLetters.length}
                 </span>
               </button>
 
-              {/* Tombol untuk Setiap Unit di Arsip */}
-              {availableUnits.map(unitItem => {
-                const isActive = filterUnit === unitItem.code || filterUnit === unitItem.name;
+              {/* Tombol untuk Setiap Jenis Surat di Arsip */}
+              {availableTypes.map(typeItem => {
+                const isActive = filterType === typeItem.code || filterType === typeItem.name;
                 return (
                   <button
-                    key={unitItem.code}
+                    key={typeItem.code}
                     type="button"
-                    onClick={() => setFilterUnit(isActive ? 'all' : unitItem.code)}
+                    onClick={() => setFilterType(isActive ? 'all' : typeItem.code)}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2560,31 +2584,31 @@ const SuratKeluar = ({
                       color: isActive ? '#ffffff' : 'var(--text-dark)',
                       boxShadow: isActive ? '0 2px 6px rgba(13, 148, 136, 0.25)' : 'none'
                     }}
-                    title={`Klik untuk hanya menampilkan surat ${unitItem.name}`}
+                    title={`Klik untuk hanya menampilkan ${typeItem.name}`}
                   >
-                    <span>{unitItem.name}</span>
+                    <span>{typeItem.name}</span>
                     <span style={{
                       padding: '0.1rem 0.5rem',
                       borderRadius: '12px',
                       fontSize: '0.72rem',
                       fontWeight: 700,
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(59, 130, 246, 0.1)',
-                      color: isActive ? '#ffffff' : '#1d4ed8'
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(13, 148, 136, 0.1)',
+                      color: isActive ? '#ffffff' : 'var(--primary-dark)'
                     }}>
-                      {unitItem.count}
+                      {typeItem.count}
                     </span>
                   </button>
                 );
               })}
 
-              {/* Tambahan: Dropdown ringkas jika ingin memilih unit lain yang belum memiliki surat keluar */}
-              {unitCodes && unitCodes.length > availableUnits.length && (
+              {/* Tambahan: Dropdown ringkas jika ingin memilih jenis surat lain yang belum ada di arsip */}
+              {letterTypes && letterTypes.length > availableTypes.length && (
                 <div style={{ display: 'inline-flex', alignItems: 'center' }}>
                   <select
                     className="input-field"
-                    value={(availableUnits.some(u => u.code === filterUnit) || filterUnit === 'all') ? '' : filterUnit}
+                    value={(availableTypes.some(t => t.code === filterType) || filterType === 'all') ? '' : filterType}
                     onChange={e => {
-                      if (e.target.value) setFilterUnit(e.target.value);
+                      if (e.target.value) setFilterType(e.target.value);
                     }}
                     style={{
                       height: '32px',
@@ -2597,9 +2621,9 @@ const SuratKeluar = ({
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="">+ Pilih Unit Lainnya...</option>
-                    {unitCodes.filter(u => !availableUnits.some(au => au.code === u.code)).map(u => (
-                      <option key={u.code} value={u.code}>{u.name} ({u.code})</option>
+                    <option value="">+ Pilih Jenis Lainnya...</option>
+                    {letterTypes.filter(t => !availableTypes.some(at => at.code === t.code)).map(t => (
+                      <option key={t.code} value={t.code}>{t.name} ({t.code})</option>
                     ))}
                   </select>
                 </div>
@@ -2612,7 +2636,7 @@ const SuratKeluar = ({
             <thead>
               <tr style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 <th style={{ padding: '0 1rem 0.5rem', textAlign: 'left', fontWeight: 600 }}>Nomor Dokumen</th>
-                <th style={{ padding: '0 1rem 0.5rem', textAlign: 'left', fontWeight: 600 }}>Unit</th>
+                <th style={{ padding: '0 1rem 0.5rem', textAlign: 'left', fontWeight: 600 }}>Jenis & Unit</th>
                 <th style={{ padding: '0 1rem 0.5rem', textAlign: 'left', fontWeight: 600 }}>Tanggal Input</th>
                 <th style={{ padding: '0 1rem 0.5rem', textAlign: 'left', fontWeight: 600 }}>Perihal</th>
                 <th style={{ padding: '0 1rem 0.5rem', textAlign: 'right', fontWeight: 600 }}>Aksi</th>
@@ -2621,22 +2645,23 @@ const SuratKeluar = ({
             <tbody>
               {(() => {
                 const filteredLetters = outgoingLetters.filter(l => {
-                  if (filterUnit !== 'all') {
-                    const info = getLetterUnitInfo(l);
-                    const matchCode = info.code === filterUnit;
-                    const matchName = info.name === filterUnit || info.fullName === filterUnit;
-                    const directCode = l.unitCode === filterUnit;
-                    const directName = l.unit === filterUnit;
+                  if (filterType !== 'all') {
+                    const info = getLetterTypeInfo(l);
+                    const matchCode = (info.code || '').toLowerCase() === filterType.toLowerCase();
+                    const matchName = (info.name || '').toLowerCase() === filterType.toLowerCase();
+                    const directCode = (l.typeCode || '').toLowerCase() === filterType.toLowerCase();
+                    const directName = (l.templateType || '').toLowerCase() === filterType.toLowerCase();
                     if (!matchCode && !matchName && !directCode && !directName) return false;
                   }
                   if (searchQuery.trim()) {
                     const q = searchQuery.toLowerCase();
                     const docNo = (l.docNo || '').toLowerCase();
                     const subject = (l.subject || '').toLowerCase();
+                    const typeName = getLetterTypeInfo(l).name.toLowerCase();
                     const unit = getLetterUnitInfo(l).name.toLowerCase();
                     const dest = (l.destination || '').toLowerCase();
                     const rec = (l.recipientName || '').toLowerCase();
-                    return docNo.includes(q) || subject.includes(q) || unit.includes(q) || dest.includes(q) || rec.includes(q);
+                    return docNo.includes(q) || subject.includes(q) || typeName.includes(q) || unit.includes(q) || dest.includes(q) || rec.includes(q);
                   }
                   return true;
                 });
@@ -2647,7 +2672,7 @@ const SuratKeluar = ({
                       <td colSpan="5" style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                         {outgoingLetters.length === 0 
                           ? 'Belum ada data surat keluar.' 
-                          : 'Tidak ada surat keluar yang sesuai dengan filter unit yang dipilih.'}
+                          : 'Tidak ada surat keluar yang sesuai dengan jenis surat yang dipilih.'}
                       </td>
                     </tr>
                   );
@@ -2655,33 +2680,39 @@ const SuratKeluar = ({
 
                 return filteredLetters.map(l => {
                   const unitInfo = getLetterUnitInfo(l);
-                  const isUnitActive = filterUnit === unitInfo.code;
+                  const typeInfo = getLetterTypeInfo(l);
+                  const isTypeActive = filterType === typeInfo.code || filterType === typeInfo.name;
                   return (
                   <tr key={l.id} style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderRadius: '8px', transition: 'all 0.2s ease' }} onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'} onMouseOut={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'}>
                     <td style={{ padding: '0.75rem', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', borderLeft: '1px solid var(--border-light)' }}>
                       <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-dark)' }}>{l.docNo}</div>
                     </td>
                     <td style={{ padding: '0.75rem', fontSize: '0.8rem', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)' }}>
-                      <span 
-                        onClick={() => setFilterUnit(isUnitActive ? 'all' : unitInfo.code)}
-                        title="Klik untuk memfilter per unit ini"
-                        style={{ 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          padding: '0.2rem 0.55rem', 
-                          borderRadius: '6px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 600, 
-                          backgroundColor: isUnitActive ? 'var(--primary)' : 'rgba(59, 130, 246, 0.08)', 
-                          color: isUnitActive ? '#ffffff' : '#1d4ed8',
-                          border: isUnitActive ? '1px solid var(--primary)' : '1px solid rgba(59, 130, 246, 0.2)',
-                          whiteSpace: 'nowrap',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {unitInfo.fullName}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
+                        <span 
+                          onClick={() => setFilterType(isTypeActive ? 'all' : typeInfo.code)}
+                          title="Klik untuk memfilter per jenis surat ini"
+                          style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            padding: '0.15rem 0.5rem', 
+                            borderRadius: '6px', 
+                            fontSize: '0.74rem', 
+                            fontWeight: 700, 
+                            backgroundColor: isTypeActive ? 'var(--primary)' : 'rgba(13, 148, 136, 0.1)', 
+                            color: isTypeActive ? '#ffffff' : 'var(--primary-dark)',
+                            border: isTypeActive ? '1px solid var(--primary)' : '1px solid rgba(13, 148, 136, 0.25)',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {typeInfo.name}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {unitInfo.name}
+                        </span>
+                      </div>
                     </td>
                     <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'rgba(13, 148, 136, 0.08)', color: 'var(--primary)', padding: '0.25rem 0.55rem', borderRadius: '6px', fontWeight: 600, fontSize: '0.78rem' }}>
