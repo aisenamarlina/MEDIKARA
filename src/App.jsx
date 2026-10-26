@@ -487,7 +487,7 @@ export default function App() {
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [openSystems, setOpenSystems] = useState({
-    surat: true,
+    surat: false,
     gudang: false,
     fixed_asset: false
   });
