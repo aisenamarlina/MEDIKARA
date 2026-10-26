@@ -9647,7 +9647,7 @@ export default function App() {
                             onChange={e => setCertForm({ ...certForm, useDigitalSignature: e.target.checked })} 
                             style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
                           />
-                          ✍️ Pakai TTD Digital
+                          Pakai TTD Digital
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
                           <input 
@@ -9657,7 +9657,7 @@ export default function App() {
                             onChange={e => setCertForm({ ...certForm, useDigitalStamp: e.target.checked })} 
                             style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
                           />
-                          💮 Pakai Stempel Resmi
+                          Pakai Stempel Resmi
                         </label>
                       </div>
                     </div>
@@ -11048,7 +11048,7 @@ export default function App() {
                           onChange={e => setLetterModal({...letterModal, data: {...letterModal.data, useDigitalSignature: e.target.checked}})} 
                           style={{ cursor: 'pointer' }}
                         />
-                        ✍️ Pakai TTD Digital
+                        Pakai TTD Digital
                       </label>
                       <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
                         <input 
@@ -11058,7 +11058,7 @@ export default function App() {
                           onChange={e => setLetterModal({...letterModal, data: {...letterModal.data, useDigitalStamp: e.target.checked}})} 
                           style={{ cursor: 'pointer' }}
                         />
-                        💮 Pakai Stempel Resmi
+                        Pakai Stempel Resmi
                       </label>
                     </div>
 
@@ -11166,7 +11166,7 @@ export default function App() {
                     onChange={e => setCertModal({...certModal, data: {...certModal.data, useDigitalSignature: e.target.checked}})} 
                     style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
                   />
-                  ✍️ Pakai TTD Digital
+                  Pakai TTD Digital
                 </label>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', cursor: 'pointer' }}>
                   <input 
@@ -11176,7 +11176,7 @@ export default function App() {
                     onChange={e => setCertModal({...certModal, data: {...certModal.data, useDigitalStamp: e.target.checked}})} 
                     style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
                   />
-                  💮 Pakai Stempel Resmi
+                  Pakai Stempel Resmi
                 </label>
               </div>
               

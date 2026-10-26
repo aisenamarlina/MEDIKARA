@@ -359,11 +359,11 @@ const LaporanAset = ({ settings = {}, assets = [], locations = [], types = [], i
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
               <input type="checkbox" checked={useDigitalSignature} onChange={e => setUseDigitalSignature(e.target.checked)} style={{ cursor: 'pointer' }} />
-              ✍️ Pakai TTD Digital
+              Pakai TTD Digital
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
               <input type="checkbox" checked={useDigitalStamp} onChange={e => setUseDigitalStamp(e.target.checked)} style={{ cursor: 'pointer' }} />
-              💮 Pakai Stempel Resmi
+              Pakai Stempel Resmi
             </label>
           </div>
         </div>

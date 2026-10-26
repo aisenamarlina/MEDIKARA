@@ -1100,11 +1100,11 @@ const SuratKeluar = ({
                         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
                             <input type="checkbox" checked={letterForm.useDigitalSignature !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                            ✍️ Pakai Tanda Tangan Digital
+                            Pakai Tanda Tangan Digital
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
                             <input type="checkbox" checked={letterForm.useDigitalStamp !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalStamp: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                            💮 Pakai Stempel Resmi
+                            Pakai Stempel Resmi
                           </label>
                         </div>
                       </div>
@@ -1993,11 +1993,11 @@ const SuratKeluar = ({
                       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer', margin: 0 }}>
                           <input type="checkbox" checked={letterForm.useDigitalSignature !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalSignature: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                          ✍️ Pakai TTD Digital pada Kotak SOP
+                          Pakai TTD Digital pada Kotak SOP
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer', margin: 0 }}>
                           <input type="checkbox" checked={letterForm.useDigitalStamp !== false} onChange={e => setLetterForm({ ...letterForm, useDigitalStamp: e.target.checked })} style={{ cursor: 'pointer', width: '15px', height: '15px' }} />
-                          💮 Pakai Stempel Resmi pada Kotak SOP
+                          Pakai Stempel Resmi pada Kotak SOP
                         </label>
                       </div>
                       {letterForm.useDigitalSignature !== false && (
