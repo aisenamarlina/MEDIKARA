@@ -833,32 +833,6 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                 </button>
               </div>
 
-              {/* Reset to Demo Data */}
-              <div style={{ padding: '1.5rem', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ padding: '0.5rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
-                    <RefreshCw size={20} color="var(--primary)" />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-dark)' }}>Muat Data Contoh (Demo)</h4>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Surat, Sertifikat, Aset & Gudang</span>
-                  </div>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Isi kembali sistem dengan data contoh lengkap (Surat Keluar/Masuk, Sertifikat Magang, Inventaris Gudang, dan Aset Tetap).</p>
-                <button 
-                  onClick={() => {
-                    openConfirm("Apakah Anda yakin ingin memuat ulang seluruh data contoh bawaan sistem? Data Surat, Sertifikat, Gudang, dan Aset akan diisi dengan data demo.", () => {
-                      db.resetToDemoData();
-                      setTimeout(() => {
-                        window.location.reload();
-                      }, 1000);
-                    });
-                  }}
-                  style={{ marginTop: 'auto', padding: '0.6rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                >
-                  <RefreshCw size={16} /> Muat Ulang Data Contoh
-                </button>
-              </div>
 
             </div>
           </div>
