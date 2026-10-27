@@ -1,8 +1,20 @@
 [
   {
-    "time": "2026-10-26T14:09:40.185Z",
+    "time": "2026-10-27T08:09:45.817Z",
+    "activity": "Logout Pengguna",
+    "module": "Autentikasi",
+    "notes": "Sesi login [Admin] diakhiri"
+  },
+  {
+    "time": "2026-10-27T08:08:15.479Z",
     "activity": "Login Pengguna",
     "module": "Autentikasi",
     "notes": "Pengguna [Admin - Administrator] berhasil masuk ke dashboard"
+  },
+  {
+    "time": "2026-10-27T07:11:28.729Z",
+    "notes": "Sesi login [Admin] diakhiri",
+    "module": "Autentikasi",
+    "activity": "Logout Pengguna"
   }
 ]

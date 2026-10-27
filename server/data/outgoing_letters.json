@@ -1,5 +1,191 @@
 [
   {
+    "id": "SU-1787714124400",
+    "date": "2026-08-26",
+    "unit": "Direktur",
+    "docNo": "025/SKep/01-10.0/VIII/K-BTR/2026",
+    "title": "Direktur Utama",
+    "skData": {
+      "noSK": "025/SKep/01-10.0/VIII/K-BTR/2026",
+      "diktum": [
+        "Memberlakukan Standar Pelayanan Rawat Jalan di lingkungan Klinik Baiturrahman sebagaimana tercantum dalam Lampiran yang merupakan bagian tidak terpisahkan dari Keputusan ini",
+        "Keputusan ini berlaku sejak tanggal ditetapkan dengan ketentuan apabila dikemudian hari terdapat kekeliruan akan diadakan perbaikan sebagaimana mestinya"
+      ],
+      "judulSK": "KEBIJAKAN STANDAR PELAYANAN RAWAT JALAN KLINIK BAITURRAHMAN",
+      "lampiran": [
+        {
+          "items": [
+            {
+              "title": "Latar Belakang",
+              "content": ""
+            },
+            {
+              "title": "Maksud dan Tujuan",
+              "content": ""
+            },
+            {
+              "title": "Sasaran",
+              "content": ""
+            },
+            {
+              "title": "Asas",
+              "content": ""
+            },
+            {
+              "title": "Ruang Lingkup",
+              "content": ""
+            },
+            {
+              "title": "Pengertian Umum",
+              "content": ""
+            }
+          ],
+          "title": "BAB I\nPENDAHULUAN",
+          "images": [],
+          "tables": []
+        },
+        {
+          "items": [
+            {
+              "title": "Alur Pelayanan Pasien Rawat Jalan",
+              "content": ""
+            },
+            {
+              "title": "Standar Waktu Tunggu dan Pelayanan",
+              "content": ""
+            },
+            {
+              "title": "Dst........",
+              "content": ""
+            }
+          ],
+          "title": "BAB II\nSTANDAR DAN PROSEDUR PELAYANAN",
+          "images": [],
+          "tables": [
+            {
+              "id": "tbl-sample-1",
+              "rows": [
+                [
+                  "1",
+                  "Pendaftaran & Rekam Medis",
+                  "≤ 10 Menit",
+                  "Petugas Loket / Rekam Medis"
+                ],
+                [
+                  "2",
+                  "Pemeriksaan Tanda Vital & Triase",
+                  "≤ 5 Menit",
+                  "Perawat / Bidan"
+                ],
+                [
+                  "3",
+                  "Pemeriksaan & Konsultasi Dokter",
+                  "10 - 15 Menit",
+                  "Dokter Penanggung Jawab Pelayanan (DPJP)"
+                ],
+                [
+                  "4",
+                  "Pelayanan Farmasi / Obat Jadi",
+                  "≤ 15 Menit",
+                  "Asisten Apoteker / Petugas Farmasi"
+                ]
+              ],
+              "title": "Tabel 1.1 Standar Waktu dan Penanggung Jawab Pelayanan",
+              "headers": [
+                "No",
+                "Tahapan Pelayanan",
+                "Standar Waktu",
+                "Penanggung Jawab"
+              ]
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "title": "Indikator Mutu Pelayanan",
+              "content": ""
+            },
+            {
+              "title": "Pelaporan Insiden Keselamatan Pasien",
+              "content": ""
+            },
+            {
+              "title": "Dst........",
+              "content": ""
+            }
+          ],
+          "title": "BAB III\nPEMANTAUAN DAN EVALUASI MUTU",
+          "images": [],
+          "tables": []
+        },
+        {
+          "items": [
+            {
+              "title": "Ketentuan Penutup",
+              "content": ""
+            },
+            {
+              "title": "Ketentuan Peralihan",
+              "content": ""
+            },
+            {
+              "title": "Dst........",
+              "content": ""
+            }
+          ],
+          "title": "BAB IV\nPENUTUP",
+          "images": [],
+          "tables": []
+        }
+      ],
+      "mengingat": [
+        "Undang-Undang Republik Indonesia Nomor 17 Tahun 2023 tentang Kesehatan",
+        "Peraturan Menteri Kesehatan Nomor 14 Tahun 2021 tentang Standar Kegiatan Usaha dan Produk pada Penyelenggaraan Perizinan Berusaha Berbasis Risiko Sektor Kesehatan"
+      ],
+      "menimbang": [
+        "dalam rangka meningkatkan mutu pelayanan kesehatan kepada masyarakat di Klinik Baiturrahman perlunya ditetapkan standar pelayanan rawat jalan yang komprehensif",
+        "bahwa berdasarkan pertimbangan sebagaimana dimaksud dalam huruf a, perlu menetapkan Keputusan Direktur Klinik Baiturrahman"
+      ],
+      "tanggalSK": "2026-08-26",
+      "menetapkan": "Kebijakan Standar Pelayanan Rawat Jalan di Lingkungan Klinik Baiturrahman",
+      "nikDirektur": "1.21.1",
+      "ditetapkanDi": "Garut",
+      "namaDirektur": "dr. H. Asep Maryaman",
+      "gunakanLampiran": true
+    },
+    "status": "Selesai",
+    "content": "Menimbang:\na. Bahwa untuk kelancaran pelayanan, diperlukan pengangkatan pegawai yang memenuhi syarat.\nb. Bahwa yang bersangkutan telah memenuhi persyaratan yang ditetapkan.\n\nMengingat:\n1. UU No. 36 Tahun 2009 tentang Kesehatan.\n2. Permenkes No. 9 Tahun 2014 tentang Klinik.\n\nMEMUTUSKAN\nMenetapkan:\nKESATU: Mengangkat tim implementasi standar pelayanan rawat jalan terpadu.\nKEDUA: Segala biaya dibebankan pada anggaran Klinik Baiturrahman.\nKETIGA: Keputusan ini berlaku sejak tanggal ditetapkan.",
+    "subject": "Keputusan Direktur Tentang Standar Pelayanan Rawat Jalan",
+    "typeCode": "SKep",
+    "unitCode": "01-10.0",
+    "signatory": "Dr. H. Ahmad Fauzi, M.Kes",
+    "attachments": "1 Berkas SOP",
+    "destination": "Seluruh Unit Pelayanan",
+    "templateType": "Surat Keputusan",
+    "recipientName": "Kepala Instalasi Rawat Jalan",
+    "signeeCount": 1,
+    "leftSignatoryName": "",
+    "leftSignatoryTitle": ""
+  },
+  {
+    "id": "SU-1787714124401",
+    "date": "2026-08-20",
+    "unit": "Manager Adum dan Keuangan",
+    "docNo": "024/Und/02-11.0/VIII/K-BTR/2026",
+    "title": "Direktur Utama",
+    "status": "Selesai",
+    "content": "Dengan hormat,\nDengan ini mengundang Bapak/Ibu untuk hadir pada:\nHari/Tanggal: Senin, 25 Agustus 2026\nWaktu: 09.00 WIB s.d. Selesai\nTempat: Ruang Rapat Klinik Baiturrahman\nAgenda: Evaluasi Kinerja Bulanan & Persiapan Akreditasi Klinik\n\nAtas perhatian dan kehadirannya kami ucapkan terima kasih.",
+    "subject": "Undangan Rapat Evaluasi Bulanan & Manajemen Mutu",
+    "typeCode": "Und",
+    "unitCode": "02-11.0",
+    "signatory": "Dr. H. Ahmad Fauzi, M.Kes",
+    "attachments": "-",
+    "destination": "Internal Klinik Baiturrahman",
+    "templateType": "Surat Undangan",
+    "recipientName": "Seluruh Kepala Ruangan dan Asisten Manager"
+  },
+  {
     "id": "SU-1789443057285",
     "date": "2026-09-15",
     "docNo": "012/SOP/01-10.0/X/K-BTR/2023",
@@ -194,41 +380,6 @@
     "leftSignatoryName": "",
     "leftSignatoryTitle": "",
     "useDigitalSignature": true
-  },
-  {
-    "id": "SU-1787714124400",
-    "date": "2026-08-26",
-    "docNo": "025/SKep/01-10.0/VIII/K-BTR/2026",
-    "title": "Direktur Utama",
-    "status": "Selesai",
-    "content": "Menimbang:\na. Bahwa untuk kelancaran pelayanan, diperlukan pengangkatan pegawai yang memenuhi syarat.\nb. Bahwa yang bersangkutan telah memenuhi persyaratan yang ditetapkan.\n\nMengingat:\n1. UU No. 36 Tahun 2009 tentang Kesehatan.\n2. Permenkes No. 9 Tahun 2014 tentang Klinik.\n\nMEMUTUSKAN\nMenetapkan:\nKESATU: Mengangkat tim implementasi standar pelayanan rawat jalan terpadu.\nKEDUA: Segala biaya dibebankan pada anggaran Klinik Baiturrahman.\nKETIGA: Keputusan ini berlaku sejak tanggal ditetapkan.",
-    "subject": "Keputusan Direktur Tentang Standar Pelayanan Rawat Jalan",
-    "typeCode": "SKep",
-    "unitCode": "01-10.0",
-    "signatory": "Dr. H. Ahmad Fauzi, M.Kes",
-    "attachments": "1 Berkas SOP",
-    "destination": "Seluruh Unit Pelayanan",
-    "signeeCount": 1,
-    "templateType": "Surat Keputusan",
-    "recipientName": "Kepala Instalasi Rawat Jalan",
-    "leftSignatoryName": "",
-    "leftSignatoryTitle": ""
-  },
-  {
-    "id": "SU-1787714124401",
-    "date": "2026-08-20",
-    "docNo": "024/Und/02-11.0/VIII/K-BTR/2026",
-    "title": "Direktur Utama",
-    "status": "Selesai",
-    "content": "Dengan hormat,\nDengan ini mengundang Bapak/Ibu untuk hadir pada:\nHari/Tanggal: Senin, 25 Agustus 2026\nWaktu: 09.00 WIB s.d. Selesai\nTempat: Ruang Rapat Klinik Baiturrahman\nAgenda: Evaluasi Kinerja Bulanan & Persiapan Akreditasi Klinik\n\nAtas perhatian dan kehadirannya kami ucapkan terima kasih.",
-    "subject": "Undangan Rapat Evaluasi Bulanan & Manajemen Mutu",
-    "typeCode": "Und",
-    "unitCode": "02-11.0",
-    "signatory": "Dr. H. Ahmad Fauzi, M.Kes",
-    "attachments": "-",
-    "destination": "Internal Klinik Baiturrahman",
-    "templateType": "Surat Undangan",
-    "recipientName": "Seluruh Kepala Ruangan dan Asisten Manager"
   },
   {
     "id": "SU-1792909961009",

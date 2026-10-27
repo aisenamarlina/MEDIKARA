@@ -18,7 +18,7 @@ import {
   File, FolderOpen, Shield, Database, Upload, Info, Lock,
   Calendar, Activity, CheckCircle, Inbox, Send, FileBadge, User, Key, EyeOff, FileDown, Image as ImageIcon, Briefcase, Edit, Menu, ArrowLeft, AlertCircle,
   ExternalLink, X, Sliders, MapPin, TrendingUp, Building2, Home, Folder,
-  CircleDot, MinusCircle
+  CircleDot, MinusCircle, ArrowRight
 } from 'lucide-react';
 import InventarisGudang from './pages/InventarisGudang';
 import DataAsetInventaris from './pages/DataAsetInventaris';
@@ -1623,7 +1623,10 @@ export default function App() {
     const cleanUser = (username || "").trim().toLowerCase();
     const cleanPass = (password || "").trim();
 
-    const foundUser = registeredUsers.find(u => u.username && u.username.toLowerCase() === cleanUser);
+    const foundUser = registeredUsers.find(u => 
+      (u.username && u.username.toLowerCase() === cleanUser) ||
+      (u.email && u.email.toLowerCase() === cleanUser)
+    );
 
     let loginSuccess = false;
     let loggedUser = null;
@@ -2517,213 +2520,283 @@ export default function App() {
 
   if (!isLoggedIn) {
     return (
-      <div className="animate-fade-in" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100vh', width: '100vw',
-        backgroundColor: 'var(--bg-card)',
-        position: 'relative', overflowY: 'auto', padding: '1.5rem 0'
-      }}>
-
-        {/* Center Card */}
+      <div 
+        className="animate-fade-in" 
+        style={{
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '100vh', 
+          width: '100vw',
+          backgroundImage: `linear-gradient(rgba(10, 22, 17, 0.65), rgba(10, 22, 17, 0.72)), url('/login_bg.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+          position: 'relative', 
+          overflowY: 'auto', 
+          padding: '2rem 1rem'
+        }}
+      >
+        {/* Glassmorphic Modal Card */}
         <div style={{
-          position: 'relative', zIndex: 2,
-          width: '100%', maxWidth: '440px',
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '24px',
-          padding: '3rem 2.5rem 2.5rem',
-          boxShadow: '0 20px 60px rgba(80,120,100,0.1), 0 4px 16px rgba(80,120,100,0.06)',
-          border: '1px solid rgba(200,220,210,0.5)',
-          margin: '1rem'
+          position: 'relative', 
+          zIndex: 2,
+          width: '100%', 
+          maxWidth: '430px',
+          backgroundColor: 'rgba(20, 32, 27, 0.52)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '20px',
+          padding: '2.5rem 2.25rem 2rem',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          margin: 'auto'
         }}>
           {/* Logo */}
-          <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '0.65rem' }}>
             <img 
               src={settings?.logo || "/logo.png"} 
-              alt="Logo Klinik" 
+              alt="Logo Klinik Baiturrahman" 
               style={{ 
-                height: '75px', 
+                height: '68px', 
                 width: 'auto', 
                 maxWidth: '120px', 
                 objectFit: 'contain',
-                display: 'inline-block'
+                display: 'inline-block',
+                filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))'
               }} 
             />
           </div>
 
-          {/* Title */}
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          {/* Title Header */}
+          <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
             <h1 style={{
-              fontSize: '2.4rem', fontWeight: 400, letterSpacing: '0.18em',
-              color: '#3a6b55', margin: '0 0 0.4rem 0',
-              fontFamily: "'Playfair Display', Georgia, serif"
+              fontSize: '1.9rem', 
+              fontWeight: 500, 
+              letterSpacing: '0.16em',
+              color: '#ffffff', 
+              margin: '0 0 0.25rem 0',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              textShadow: '0 2px 10px rgba(0,0,0,0.5)'
             }}>MEDIKARA</h1>
             <p style={{
-              fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.28em',
-              textTransform: 'uppercase', color: '#8aaa98', margin: 0
+              fontSize: '0.78rem', 
+              fontWeight: 400, 
+              letterSpacing: '0.04em',
+              color: '#e2e8f0', 
+              margin: 0
             }}>Klinik Baiturrahman Garut</p>
           </div>
 
-          {/* Success Message */}
-          {regSuccessMsg && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf0cd', color: '#3a8a5c', padding: '0.7rem 1rem', borderRadius: '10px', fontSize: '0.82rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckCircle2 size={15} /> {regSuccessMsg}
-            </div>
-          )}
+          {/* Greeting Section */}
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{
+              fontSize: '1.45rem',
+              fontWeight: 600,
+              color: '#ffffff',
+              margin: '0 0 0.35rem 0',
+              letterSpacing: '-0.01em'
+            }}>Selamat Datang</h2>
+            <p style={{
+              fontSize: '0.82rem',
+              color: '#cbd5e1',
+              margin: 0,
+              lineHeight: 1.45
+            }}>silahkan masuk untuk mengakses sistem administrasi, non medis</p>
+          </div>
 
           {/* Error Message */}
           {authError && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.7rem 1rem', borderRadius: '10px', fontSize: '0.82rem', marginBottom: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldAlert size={15} /> {authError}
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.2)', 
+              border: '1px solid rgba(239, 68, 68, 0.4)', 
+              color: '#fecaca', 
+              padding: '0.65rem 0.9rem', 
+              borderRadius: '10px', 
+              fontSize: '0.82rem', 
+              marginBottom: '1.25rem', 
+              fontWeight: 500, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              backdropFilter: 'blur(8px)'
+            }}>
+              <ShieldAlert size={16} style={{ flexShrink: 0, color: '#f87171' }} />
+              <span>{authError}</span>
             </div>
           )}
 
-
-
-          {/* ── LOGIN FORM ── */}
-          {/* ── LOGIN FORM ── */}
-          {(
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-              {/* Username Field with Notched Legend */}
-              <fieldset style={{
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '0.35rem 0.85rem 0.45rem',
-                margin: 0,
-                position: 'relative',
-                backgroundColor: '#ffffff',
-                transition: 'border-color 0.2s, box-shadow 0.2s'
-              }}>
-                <legend style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  color: '#64748b',
-                  letterSpacing: '0.6px',
-                  padding: '0 0.35rem',
-                  textTransform: 'uppercase'
-                }}>
-                  USERNAME:
-                </legend>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <User size={18} fill="#1a4a38" color="#1a4a38" style={{ flexShrink: 0 }} />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    required
-                    placeholder="username"
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      background: 'transparent',
-                      width: '100%',
-                      fontSize: '0.92rem',
-                      color: '#1e293b',
-                      padding: '0.15rem 0'
-                    }}
-                  />
-                </div>
-              </fieldset>
-
-              {/* Password Field with Notched Legend */}
-              <fieldset style={{
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '0.35rem 0.85rem 0.45rem',
-                margin: 0,
-                position: 'relative',
-                backgroundColor: '#ffffff',
-                transition: 'border-color 0.2s, box-shadow 0.2s'
-              }}>
-                <legend style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  color: '#64748b',
-                  letterSpacing: '0.6px',
-                  padding: '0 0.35rem',
-                  textTransform: 'uppercase'
-                }}>
-                  PASSWORD:
-                </legend>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Lock size={18} fill="#1a4a38" color="#1a4a38" style={{ flexShrink: 0 }} />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••"
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      background: 'transparent',
-                      width: '100%',
-                      fontSize: '0.92rem',
-                      color: '#1e293b',
-                      padding: '0.15rem 0'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#475569',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexShrink: 0
-                    }}
-                  >
-                    {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
-                  </button>
-                </div>
-              </fieldset>
-
-              {/* Remember Me */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ accentColor: '#1a4a38', width: '15px', height: '15px' }} />
-                  <label htmlFor="rememberMe" style={{ fontSize: '0.82rem', color: '#64748b', cursor: 'pointer', userSelect: 'none' }}>Ingat Saya</label>
-                </div>
-              </div>
-
-              {/* Submit Button (Matching User Design) */}
-              <button
-                type="submit"
-                style={{
-                  padding: '0.8rem 1.2rem',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.92rem',
-                  backgroundColor: '#9cb7ae',
-                  color: '#133e2b',
-                  border: 'none',
-                  cursor: 'pointer',
-                  marginTop: '0.4rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = '#8ba89f';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = '#9cb7ae';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <span>Masuk</span>
-                <span style={{ fontSize: '1.05rem', display: 'flex', alignItems: 'center', fontWeight: 700 }}>➔]</span>
-              </button>
-            </form>
+          {/* Success Message */}
+          {regSuccessMsg && (
+            <div style={{ 
+              background: 'rgba(34, 197, 94, 0.2)', 
+              border: '1px solid rgba(34, 197, 94, 0.4)', 
+              color: '#bbf7d0', 
+              padding: '0.65rem 0.9rem', 
+              borderRadius: '10px', 
+              fontSize: '0.82rem', 
+              marginBottom: '1.25rem', 
+              fontWeight: 500, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              backdropFilter: 'blur(8px)'
+            }}>
+              <CheckCircle2 size={16} style={{ flexShrink: 0, color: '#4ade80' }} />
+              <span>{regSuccessMsg}</span>
+            </div>
           )}
 
+          {/* ── LOGIN FORM ── */}
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+            {/* Username or Email Field */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#f8fafc', marginBottom: '0.45rem' }}>
+                Username atau Email
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                backgroundColor: 'rgba(0, 0, 0, 0.28)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                borderRadius: '10px',
+                padding: '0.68rem 0.9rem',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
+              }}>
+                <User size={18} color="#cbd5e1" style={{ flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  required
+                  placeholder="Masukkan Username Anda"
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: '#ffffff',
+                    fontSize: '0.88rem',
+                    padding: 0
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#f8fafc', marginBottom: '0.45rem' }}>
+                Kata Sandi
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                backgroundColor: 'rgba(0, 0, 0, 0.28)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                borderRadius: '10px',
+                padding: '0.68rem 0.9rem',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
+              }}>
+                <Lock size={18} color="#cbd5e1" style={{ flexShrink: 0 }} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••••"
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: '#ffffff',
+                    fontSize: '0.88rem',
+                    padding: 0
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    transition: 'color 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                  aria-label={showPassword ? "Sembunyikan sandi" : "Lihat sandi"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me Row */}
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{
+                    width: '15px',
+                    height: '15px',
+                    cursor: 'pointer',
+                    accentColor: '#1b4d3e',
+                    borderRadius: '4px'
+                  }}
+                />
+                <span style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>Ingat Saya</span>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.85rem 1.25rem',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                backgroundColor: '#1b4332',
+                color: '#ffffff',
+                fontSize: '0.92rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.6rem',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = '#23533e';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.35)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = '#1b4332';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.25)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <span>Masuk ke Sistem</span>
+              <ArrowRight size={17} />
+            </button>
+          </form>
         </div>
       </div>
     );
