@@ -95,12 +95,21 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
       try {
         sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
       } catch (e) {}
+      window.dispatchEvent(new CustomEvent('special-access-updated'));
 
-      const featureName = selectedFeature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
+      const targetFeature = selectedFeature;
+      const featureName = targetFeature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
       window.dispatchEvent(new CustomEvent('app-toast', { 
-        detail: { message: `Kunci dibuka! Akses ${featureName} kini aktif.`, type: 'success' } 
+        detail: { message: `Kunci dibuka! Membuka tampilan ${featureName}...`, type: 'success' } 
       }));
       handleClosePinModal();
+
+      // Langsung menuju ke tampilan fitur
+      if (targetFeature === 'gudang') {
+        if (typeof setActiveMenu === 'function') setActiveMenu('warehouse');
+      } else if (targetFeature === 'fixed_asset') {
+        if (typeof setActiveMenu === 'function') setActiveMenu('assets_inventaris');
+      }
     } else {
       setPinError('PIN salah! Silakan coba lagi.');
     }
@@ -430,39 +439,6 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
         {activeTab === 'akses' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
-            {/* Header Seksi */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              flexWrap: 'wrap', 
-              gap: '0.75rem', 
-              borderBottom: '1px solid var(--border-light, #e2e8f0)', 
-              paddingBottom: '1rem' 
-            }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-dark, #111827)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Lock size={19} color="var(--primary, #0d652d)" /> Otorisasi Akses Khusus
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '0.25rem 0 0 0' }}>
-                  Akses menu operasional Gudang Umum dan Manajemen Aset Tetap diamankan dengan verifikasi PIN.
-                </p>
-              </div>
-              <div style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '0.4rem', 
-                backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-                color: '#0d652d', 
-                padding: '0.35rem 0.85rem', 
-                borderRadius: '20px', 
-                fontSize: '0.78rem', 
-                fontWeight: 700 
-              }}>
-                <CheckCircle2 size={14} /> PIN Khusus Aktif: 21721
-              </div>
-            </div>
-
             {/* List Kartu Akses */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               
@@ -499,15 +475,6 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                       <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
                         Gudang Umum
                       </h4>
-                      {unlockedFeatures.gudang ? (
-                        <span style={{ fontSize: '0.74rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '0.2rem 0.65rem', borderRadius: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Unlock size={12} /> Terbuka
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.74rem', color: '#dc2626', backgroundColor: '#fee2e2', padding: '0.2rem 0.65rem', borderRadius: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Lock size={12} /> Terkunci
-                        </span>
-                      )}
                     </div>
                     <p style={{ margin: '0.35rem 0 0', fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
                       Modul penerimaan barang masuk, stok gudang logistik, dan pengelolaan permintaan keluar.
@@ -516,56 +483,29 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {!unlockedFeatures.gudang ? (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPinModal('gudang')}
-                      style={{
-                        padding: '0.65rem 1.4rem',
-                        backgroundColor: '#ffffff',
-                        color: 'var(--primary, #0d652d)',
-                        border: '1.5px solid var(--primary, #0d652d)',
-                        borderRadius: '10px',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
-                    >
-                      <Lock size={15} /> Buka dengan kata sandi
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu && setActiveMenu('warehouse')}
-                        style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <Box size={14} /> Inventaris Barang
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu && setActiveMenu('requests')}
-                        style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <ChevronRight size={14} /> Permintaan Keluar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleLockFeature('gudang')}
-                        title="Kunci kembali fitur ini"
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                      >
-                        <Lock size={14} /> Kunci
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPinModal('gudang')}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      backgroundColor: 'var(--bg-card, #ffffff)',
+                      color: 'var(--primary, #0d652d)',
+                      border: '1.5px solid var(--primary, #0d652d)',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)'; }}
+                  >
+                    <Lock size={15} /> Buka
+                  </button>
                 </div>
               </div>
 
@@ -602,15 +542,6 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                       <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
                         Aset Tetap
                       </h4>
-                      {unlockedFeatures.fixed_asset ? (
-                        <span style={{ fontSize: '0.74rem', color: '#15803d', backgroundColor: '#dcfce7', padding: '0.2rem 0.65rem', borderRadius: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Unlock size={12} /> Terbuka
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.74rem', color: '#dc2626', backgroundColor: '#fee2e2', padding: '0.2rem 0.65rem', borderRadius: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Lock size={12} /> Terkunci
-                        </span>
-                      )}
                     </div>
                     <p style={{ margin: '0.35rem 0 0', fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
                       Pencatatan Master Data, Inventaris Barang/Gedung/Medis, Relokasi Ruangan, dan Laporan Aset.
@@ -619,73 +550,29 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {!unlockedFeatures.fixed_asset ? (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPinModal('fixed_asset')}
-                      style={{
-                        padding: '0.65rem 1.4rem',
-                        backgroundColor: '#ffffff',
-                        color: 'var(--primary, #0d652d)',
-                        border: '1.5px solid var(--primary, #0d652d)',
-                        borderRadius: '10px',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
-                    >
-                      <Lock size={15} /> Buka dengan kata sandi
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu && setActiveMenu('asset_master')}
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Master Data
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu && setActiveMenu('assets_inventaris')}
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Data Aset
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu && setActiveMenu('asset_relocation')}
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Relokasi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (typeof setAssetReportTab === 'function') setAssetReportTab('all_assets');
-                          if (setActiveMenu) setActiveMenu('report_assets');
-                        }}
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: 'var(--primary, #0d652d)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Laporan
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleLockFeature('fixed_asset')}
-                        title="Kunci kembali fitur ini"
-                        style={{ padding: '0.55rem 0.85rem', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                      >
-                        <Lock size={14} /> Kunci
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPinModal('fixed_asset')}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      backgroundColor: 'var(--bg-card, #ffffff)',
+                      color: 'var(--primary, #0d652d)',
+                      border: '1.5px solid var(--primary, #0d652d)',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)'; }}
+                  >
+                    <Lock size={15} /> Buka
+                  </button>
                 </div>
               </div>
 
@@ -1367,9 +1254,10 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
           padding: '1rem'
         }}>
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card, #ffffff)',
             borderRadius: '24px',
             padding: '2.25rem 2.5rem',
+            border: '1px solid var(--border)',
             width: '420px',
             maxWidth: '92%',
             position: 'relative',
@@ -1415,10 +1303,10 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
             </div>
 
             {/* Judul & Subjudul */}
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.4rem 0' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark, #111827)', margin: '0 0 0.4rem 0' }}>
               Verifikasi Otorisasi PIN
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
               Masukkan 5 digit PIN keamanan untuk membuka akses modul <strong style={{ color: '#0d652d' }}>{selectedFeature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap'}</strong>.
             </p>
 
@@ -1431,9 +1319,9 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
                   style={{
                     width: '48px',
                     height: '56px',
-                    border: digit ? '2px solid #0d652d' : '1.5px solid #cbd5e1',
+                    border: digit ? '2px solid var(--primary, #0d652d)' : '1.5px solid var(--border, #cbd5e1)',
                     borderRadius: '12px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--bg-main, #ffffff)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1704,7 +1592,7 @@ const FileUploadRow = ({ title, desc, image, inputRef, onUpload, round }) => (
         transition: 'all 0.15s ease'
       }}
       onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(13, 101, 45, 0.08)'; }}
-      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)'; }}
     >
       <Upload size={14} /> Pilih Berkas
     </button>

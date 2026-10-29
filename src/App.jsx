@@ -18,7 +18,7 @@ import {
   File, FolderOpen, Shield, Database, Upload, Info, Lock,
   Calendar, Activity, CheckCircle, Inbox, Send, FileBadge, User, Key, EyeOff, FileDown, Image as ImageIcon, Briefcase, Edit, Menu, ArrowLeft, AlertCircle,
   ExternalLink, X, Sliders, MapPin, TrendingUp, Building2, Home, Folder,
-  CircleDot, MinusCircle, ArrowRight
+  CircleDot, MinusCircle, ArrowRight, Unlock, Box
 } from 'lucide-react';
 import InventarisGudang from './pages/InventarisGudang';
 import DataAsetInventaris from './pages/DataAsetInventaris';
@@ -432,6 +432,96 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSuratNavPopup, setShowSuratNavPopup] = useState(false);
 
+  // Special Access (Gudang Umum & Aset Tetap) state & sync
+  const [specialAccess, setSpecialAccess] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
+    } catch {
+      return { gudang: false, fixed_asset: false };
+    }
+  });
+
+  useEffect(() => {
+    const handleSyncAccess = () => {
+      try {
+        const current = JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
+        setSpecialAccess(current);
+      } catch (e) {}
+    };
+    window.addEventListener('special-access-updated', handleSyncAccess);
+    window.addEventListener('storage', handleSyncAccess);
+    return () => {
+      window.removeEventListener('special-access-updated', handleSyncAccess);
+      window.removeEventListener('storage', handleSyncAccess);
+    };
+  }, []);
+
+  // Otomatis mengunci saat meninggalkan modul Gudang Umum atau Aset Tetap
+  const prevMenuRef = useRef(activeMenu);
+  useEffect(() => {
+    const prevMenu = prevMenuRef.current;
+    prevMenuRef.current = activeMenu;
+
+    const gudangMenus = ['warehouse', 'requests', 'borrowings'];
+    const assetMenus = ['assets_inventaris', 'asset_master', 'asset_relocation', 'report_assets'];
+
+    const wasInGudang = gudangMenus.includes(prevMenu);
+    const isNowInGudang = gudangMenus.includes(activeMenu);
+
+    const wasInAssets = assetMenus.includes(prevMenu);
+    const isNowInAssets = assetMenus.includes(activeMenu);
+
+    let nextAccess = { ...specialAccess };
+    let changed = false;
+
+    // Otomatis mengunci saat pengguna keluar dari area Gudang Umum
+    if (wasInGudang && !isNowInGudang && nextAccess.gudang) {
+      nextAccess.gudang = false;
+      changed = true;
+    }
+
+    // Otomatis mengunci saat pengguna keluar dari area Aset Tetap
+    if (wasInAssets && !isNowInAssets && nextAccess.fixed_asset) {
+      nextAccess.fixed_asset = false;
+      changed = true;
+    }
+
+    if (changed) {
+      setSpecialAccess(nextAccess);
+      try {
+        sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(nextAccess));
+      } catch (e) {}
+      window.dispatchEvent(new CustomEvent('special-access-updated'));
+    }
+  }, [activeMenu, specialAccess]);
+
+  const unlockSpecialAccess = (feature) => {
+    const updated = { ...specialAccess, [feature]: true };
+    setSpecialAccess(updated);
+    try {
+      sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent('special-access-updated'));
+    const featureName = feature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
+    window.dispatchEvent(new CustomEvent('app-toast', { 
+      detail: { message: `Kunci dibuka! Akses ${featureName} kini aktif.`, type: 'success' } 
+    }));
+  };
+
+  const lockSpecialAccess = (feature) => {
+    const updated = { ...specialAccess, [feature]: false };
+    setSpecialAccess(updated);
+    try {
+      sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent('special-access-updated'));
+    const featureName = feature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
+    window.dispatchEvent(new CustomEvent('app-toast', { 
+      detail: { message: `Keluar dari modul ${featureName}. Otomatis dikunci kembali.`, type: 'info' } 
+    }));
+    setActiveMenu('dashboard');
+  };
+
   // Scroll-to-arsip state & refs
   const [scrollToSection, setScrollToSection] = useState(null);
   const arsipSuratMasukRef = useRef(null);
@@ -495,6 +585,12 @@ export default function App() {
   const toggleSystem = (sys) => {
     setOpenSystems(prev => ({ ...prev, [sys]: !prev[sys] }));
   };
+
+  useEffect(() => {
+    if (['letters_in', 'letters_out'].includes(activeMenu)) {
+      setOpenSystems(prev => prev.surat ? prev : { ...prev, surat: true });
+    }
+  }, [activeMenu]);
 
   // DB States
   const [settings, setSettings] = useState(() => db.get("settings"));
@@ -7678,18 +7774,20 @@ export default function App() {
   // ----------------------------------------------------
   // MAIN DASHBOARD TEMPLATE LAYOUT
   // ----------------------------------------------------
+  const isDark = theme === 'dark';
+
   return (
-    <div style={{ display: 'flex', height: '100dvh', width: '100vw', overflow: 'hidden', backgroundColor: 'var(--bg-main)' }}>
+    <div style={{ display: 'flex', height: '100dvh', width: '100vw', overflow: 'hidden', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)' }}>
       {/* Sidebar Navigation */}
       <aside className={`sidebar-container ${isMobileMenuOpen ? 'mobile-open' : ''}`} style={{
         position: 'relative', 
         height: 'calc(100dvh - 24px)',
         margin: '12px 0 12px 14px',
         width: sidebarCollapsed ? '76px' : '260px', 
-        backgroundColor: '#ffffff',
+        backgroundColor: isDark ? 'var(--bg-card)' : '#ffffff',
         borderRadius: '24px',
-        border: '1px solid rgba(16, 185, 129, 0.18)',
-        boxShadow: '0 10px 30px rgba(16, 185, 129, 0.06), 0 2px 8px rgba(0,0,0,0.03)',
+        border: isDark ? '1px solid var(--border)' : '1px solid rgba(16, 185, 129, 0.18)',
+        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.45)' : '0 10px 30px rgba(16, 185, 129, 0.06), 0 2px 8px rgba(0,0,0,0.03)',
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex', 
         flexDirection: 'column', 
@@ -7717,11 +7815,11 @@ export default function App() {
               alignItems: 'center', 
               justifyContent: 'center', 
               cursor: 'pointer',
-              color: '#059669',
+              color: isDark ? '#34d399' : '#059669',
               borderRadius: '6px',
               transition: 'background-color 0.2s'
             }}
-            onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'}
+            onMouseOver={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.1)'}
             onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
             title={sidebarCollapsed ? "Perbesar Sidebar" : "Perkecil Sidebar"}
           >
@@ -7738,7 +7836,7 @@ export default function App() {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: '#64748b',
+              color: isDark ? '#94a3b8' : '#64748b',
               padding: '6px',
               borderRadius: '8px'
             }}
@@ -7770,7 +7868,7 @@ export default function App() {
               objectFit: 'contain', 
               display: 'block',
               margin: '0 auto 0.5rem',
-              filter: 'drop-shadow(0 4px 8px rgba(16, 185, 129, 0.18))',
+              filter: isDark ? 'drop-shadow(0 4px 10px rgba(52, 211, 153, 0.25))' : 'drop-shadow(0 4px 8px rgba(16, 185, 129, 0.18))',
               cursor: sidebarCollapsed ? 'pointer' : 'default'
             }}
             onClick={() => { if (sidebarCollapsed) setSidebarCollapsed(false); }}
@@ -7782,7 +7880,7 @@ export default function App() {
                 fontWeight: 800, 
                 fontSize: '1.25rem', 
                 letterSpacing: '0.04em', 
-                color: '#065f46', 
+                color: isDark ? '#6ee7b7' : '#065f46', 
                 fontFamily: 'Outfit, sans-serif', 
                 lineHeight: 1.15, 
                 whiteSpace: 'nowrap' 
@@ -7791,7 +7889,7 @@ export default function App() {
               </span>
               <span style={{ 
                 fontSize: '0.62rem', 
-                color: '#059669', 
+                color: isDark ? '#34d399' : '#059669', 
                 letterSpacing: '0.06em', 
                 fontWeight: 700, 
                 textTransform: 'uppercase', 
@@ -7829,7 +7927,7 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "dashboard" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Dashboard" : ""}
           >
-            <Home size={19} style={{ color: activeMenu === "dashboard" ? '#064e3b' : '#059669', flexShrink: 0 }} />
+            <Home size={19} style={{ color: activeMenu === "dashboard" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Dashboard</span>}
           </button>
 
@@ -7844,13 +7942,13 @@ export default function App() {
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <Mail size={19} style={{ color: ['letters_in', 'letters_out'].includes(activeMenu) ? '#064e3b' : '#059669', flexShrink: 0 }} />
+              <Mail size={19} style={{ color: ['letters_in', 'letters_out'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
               {!sidebarCollapsed && <span>Persuratan</span>}
             </div>
             {!sidebarCollapsed && (
               openSystems.surat 
-                ? <ChevronDown size={14} style={{ color: '#059669' }} /> 
-                : <ChevronRight size={14} style={{ color: '#64748b' }} />
+                ? <ChevronDown size={14} style={{ color: isDark ? '#34d399' : '#059669' }} /> 
+                : <ChevronRight size={14} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
             )}
           </button>
           
@@ -7861,14 +7959,14 @@ export default function App() {
                 onClick={() => setActiveMenu("letters_in")} 
                 className={`sidebar-subitem ${activeMenu === "letters_in" ? "active" : ""}`}
               >
-                <CircleDot size={14} style={{ color: activeMenu === "letters_in" ? '#047857' : '#10b981', flexShrink: 0 }} />
+                <CircleDot size={14} style={{ color: activeMenu === "letters_in" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
                 <span>Surat Masuk</span>
               </button>
               <button 
                 onClick={() => setActiveMenu("letters_out")} 
                 className={`sidebar-subitem ${activeMenu === "letters_out" ? "active" : ""}`}
               >
-                <MinusCircle size={14} style={{ color: activeMenu === "letters_out" ? '#047857' : '#10b981', flexShrink: 0 }} />
+                <MinusCircle size={14} style={{ color: activeMenu === "letters_out" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
                 <span>Surat Keluar</span>
               </button>
             </div>
@@ -7880,7 +7978,7 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "certificates" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Sertifikat & Piagam" : ""}
           >
-            <Award size={19} style={{ color: activeMenu === "certificates" ? '#064e3b' : '#059669', flexShrink: 0 }} />
+            <Award size={19} style={{ color: activeMenu === "certificates" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Sertifikat & Piagam</span>}
           </button>
 
@@ -7890,7 +7988,7 @@ export default function App() {
             className={`sidebar-item ${activeMenu === "archive" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Arsip Digital" : ""}
           >
-            <Folder size={19} style={{ color: activeMenu === "archive" ? '#064e3b' : '#059669', flexShrink: 0 }} />
+            <Folder size={19} style={{ color: activeMenu === "archive" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Arsip Digital</span>}
           </button>
 
@@ -7899,13 +7997,9 @@ export default function App() {
             onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
             className={`sidebar-item ${['reports', 'report_letters', 'report_assets'].includes(activeMenu) ? "active" : ""}`} 
             title={sidebarCollapsed ? "Laporan" : ""}
-            style={{ justifyContent: 'space-between' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <FileText size={19} style={{ color: ['reports', 'report_letters', 'report_assets'].includes(activeMenu) ? '#064e3b' : '#059669', flexShrink: 0 }} />
-              {!sidebarCollapsed && <span>Laporan</span>}
-            </div>
-            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: '#64748b' }} />}
+            <FileText size={19} style={{ color: ['reports', 'report_letters', 'report_assets'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
+            {!sidebarCollapsed && <span>Laporan</span>}
           </button>
 
           {/* Pengaturan Sistem */}
@@ -7913,13 +8007,9 @@ export default function App() {
             onClick={() => { setActiveMenu("settings"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
             className={`sidebar-item ${activeMenu === "settings" ? "active" : ""}`} 
             title={sidebarCollapsed ? "Pengaturan Sistem" : ""}
-            style={{ justifyContent: 'space-between' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <Settings size={19} style={{ color: activeMenu === "settings" ? '#064e3b' : '#059669', flexShrink: 0 }} />
-              {!sidebarCollapsed && <span>Pengaturan Sistem</span>}
-            </div>
-            {!sidebarCollapsed && <ChevronRight size={14} style={{ color: '#64748b' }} />}
+            <Settings size={19} style={{ color: activeMenu === "settings" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
+            {!sidebarCollapsed && <span>Pengaturan Sistem</span>}
           </button>
 
           {/* Spacer */}
@@ -7964,7 +8054,7 @@ export default function App() {
           display: 'flex', 
           flexDirection: 'column', 
           minWidth: 0, 
-          backgroundColor: 'var(--bg-main)',
+          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)',
           position: 'relative'
         }}
       >
@@ -7998,7 +8088,7 @@ export default function App() {
         {/* Header bar (Floating Card Navbar matching Sidebar & Design System) */}
         <header style={{ 
           height: '64px', 
-          backgroundColor: theme === 'dark' ? 'rgba(15, 30, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)', 
+          backgroundColor: isDark ? 'rgba(19, 34, 56, 0.92)' : 'rgba(255, 255, 255, 0.95)', 
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           display: 'flex', 
@@ -8007,8 +8097,8 @@ export default function App() {
           padding: '0 1.25rem', 
           margin: '12px 1.5rem 0 1rem',
           borderRadius: '20px',
-          border: '1px solid rgba(16, 185, 129, 0.18)',
-          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.05), 0 1px 3px rgba(0,0,0,0.02)',
+          border: isDark ? '1px solid var(--border)' : '1px solid rgba(16, 185, 129, 0.18)',
+          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.35)' : '0 4px 20px rgba(16, 185, 129, 0.05), 0 1px 3px rgba(0,0,0,0.02)',
           position: 'sticky',
           top: '12px',
           zIndex: 30,
@@ -8048,7 +8138,7 @@ export default function App() {
                   style={{ position: 'absolute', left: '12px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
                   title="Cari"
                 >
-                  <Search size={16} style={{ color: '#059669' }} />
+                  <Search size={16} style={{ color: isDark ? '#34d399' : '#059669' }} />
                 </button>
                 <input 
                   id="global-search-input"
@@ -8072,11 +8162,11 @@ export default function App() {
                     fontSize: '0.82rem',
                     fontWeight: 500,
                     width: '360px',
-                    backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.25)' : '#f8fafc',
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : '#f8fafc',
                     color: 'var(--text-dark)',
                     transition: 'all 0.2s ease',
                     boxShadow: isSearchFocused ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : 'none',
-                    borderColor: isSearchFocused ? '#059669' : 'rgba(16, 185, 129, 0.22)'
+                    borderColor: isSearchFocused ? (isDark ? '#34d399' : '#059669') : 'rgba(16, 185, 129, 0.22)'
                   }} 
                 />
                 <span style={{ 
@@ -8084,12 +8174,12 @@ export default function App() {
                   right: '10px', 
                   fontSize: '0.66rem', 
                   fontWeight: 700, 
-                  color: '#059669', 
-                  backgroundColor: '#e6f4ea', 
+                  color: isDark ? '#34d399' : '#059669', 
+                  backgroundColor: isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea', 
                   padding: '2px 6px', 
                   borderRadius: '6px', 
                   pointerEvents: 'none',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  border: isDark ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)',
                   letterSpacing: '0.02em'
                 }}>
                   ⌘K
@@ -8099,7 +8189,7 @@ export default function App() {
               {isSearchFocused && globalSearchQuery.trim() !== "" && (
                 <div style={{
                   position: 'absolute', top: '115%', left: 0, width: '380px', backgroundColor: 'var(--bg-card)',
-                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.12)', border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', border: isDark ? '1px solid var(--border)' : '1px solid rgba(16, 185, 129, 0.2)',
                   zIndex: 200, overflow: 'hidden'
                 }}>
                   {getSearchResults().length > 0 ? (
@@ -8111,11 +8201,11 @@ export default function App() {
                           handleSearchResultClick(res);
                         }}
                         style={{ padding: '0.7rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'background-color 0.15s' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e6f4ea'}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.06)' : '#e6f4ea'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark)' }}>{res.label}</span>
-                        <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600 }}>{res.category}</span>
+                        <span style={{ fontSize: '0.68rem', color: isDark ? '#34d399' : '#059669', fontWeight: 600 }}>{res.category}</span>
                       </div>
                     ))
                   ) : (
@@ -8140,24 +8230,24 @@ export default function App() {
                    width: '38px',
                    height: '38px',
                    borderRadius: '12px',
-                   backgroundColor: showNotifications ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
-                   border: `1px solid ${showNotifications ? '#10b981' : 'rgba(16, 185, 129, 0.18)'}`,
+                   backgroundColor: showNotifications ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                   border: `1px solid ${showNotifications ? '#10b981' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.18)')}`,
                    display: 'flex', 
                    alignItems: 'center', 
                    justifyContent: 'center',
-                   color: showNotifications ? '#0d5c3a' : '#059669', 
+                   color: showNotifications ? (isDark ? '#6ee7b7' : '#0d5c3a') : (isDark ? '#34d399' : '#059669'), 
                    cursor: 'pointer', 
                    transition: 'all 0.2s ease',
                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                  }}
                  onMouseOver={e => {
-                   e.currentTarget.style.backgroundColor = '#e6f4ea';
+                   e.currentTarget.style.backgroundColor = isDark ? 'rgba(52, 211, 153, 0.15)' : '#e6f4ea';
                    e.currentTarget.style.borderColor = '#10b981';
                    e.currentTarget.style.transform = 'translateY(-1px)';
                  }}
                  onMouseOut={e => {
-                   e.currentTarget.style.backgroundColor = showNotifications ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
-                   e.currentTarget.style.borderColor = showNotifications ? '#10b981' : 'rgba(16, 185, 129, 0.18)';
+                   e.currentTarget.style.backgroundColor = showNotifications ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                   e.currentTarget.style.borderColor = showNotifications ? '#10b981' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.18)');
                    e.currentTarget.style.transform = 'none';
                  }}
                  title="Notifikasi"
@@ -8181,17 +8271,17 @@ export default function App() {
                {showNotifications && (
                  <div style={{
                    position: 'absolute', right: 0, top: '48px', width: '320px', backgroundColor: 'var(--bg-card)',
-                   borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.15)', border: '1px solid rgba(16, 185, 129, 0.2)',
+                   borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.3)', border: isDark ? '1px solid var(--border)' : '1px solid rgba(16, 185, 129, 0.2)',
                    zIndex: 100, overflow: 'hidden'
                  }}>
-                   <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-main)' }}>
+                   <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)' }}>
                      <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-dark)', fontFamily: 'Outfit, sans-serif' }}>Notifikasi Terkini</span>
-                     <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, backgroundColor: '#e6f4ea', padding: '2px 8px', borderRadius: '12px' }}>{activityLogs.length} Baru</span>
+                     <span style={{ fontSize: '0.72rem', color: isDark ? '#34d399' : '#059669', fontWeight: 700, backgroundColor: isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea', padding: '2px 8px', borderRadius: '12px' }}>{activityLogs.length} Baru</span>
                    </div>
                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                      {activityLogs.slice(0, 5).map((log, index) => (
                        <div key={index} style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background-color 0.15s' }}
-                         onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                         onMouseOver={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#f0fdf4'}
                          onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                        >
                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-dark)', marginBottom: '0.15rem' }}>{log.action}</div>
@@ -8248,24 +8338,24 @@ export default function App() {
                 width: '38px',
                 height: '38px',
                 borderRadius: '12px',
-                backgroundColor: activeMenu === 'settings' ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
-                border: `1px solid ${activeMenu === 'settings' ? '#10b981' : 'rgba(16, 185, 129, 0.18)'}`,
+                backgroundColor: activeMenu === 'settings' ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                border: `1px solid ${activeMenu === 'settings' ? '#10b981' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.18)')}`,
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
-                color: '#059669', 
+                color: isDark ? '#34d399' : '#059669', 
                 cursor: 'pointer', 
                 transition: 'all 0.2s ease',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
               }}
               onMouseOver={e => {
-                e.currentTarget.style.backgroundColor = '#e6f4ea';
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(52, 211, 153, 0.15)' : '#e6f4ea';
                 e.currentTarget.style.borderColor = '#10b981';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseOut={e => {
-                e.currentTarget.style.backgroundColor = activeMenu === 'settings' ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
-                e.currentTarget.style.borderColor = activeMenu === 'settings' ? '#10b981' : 'rgba(16, 185, 129, 0.18)';
+                e.currentTarget.style.backgroundColor = activeMenu === 'settings' ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                e.currentTarget.style.borderColor = activeMenu === 'settings' ? '#10b981' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.18)');
                 e.currentTarget.style.transform = 'none';
               }}
               title="Pengaturan"
@@ -8274,7 +8364,7 @@ export default function App() {
             </button>
 
             {/* Subtle Divider */}
-            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(16, 185, 129, 0.2)', margin: '0 0.15rem' }} />
+            <div style={{ width: '1px', height: '24px', backgroundColor: isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.2)', margin: '0 0.15rem' }} />
 
             {/* Profile Pill Card */}
             <div style={{ position: 'relative' }}>
@@ -8287,19 +8377,19 @@ export default function App() {
                   cursor: 'pointer', 
                   padding: '0.28rem 0.75rem 0.28rem 0.4rem', 
                   borderRadius: '14px',
-                  border: `1px solid ${showProfileMenu ? '#059669' : 'rgba(16, 185, 129, 0.2)'}`,
-                  backgroundColor: showProfileMenu ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
+                  border: `1px solid ${showProfileMenu ? '#059669' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.2)')}`,
+                  backgroundColor: showProfileMenu ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'),
                   boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.borderColor = '#059669';
-                  e.currentTarget.style.backgroundColor = '#e6f4ea';
+                  e.currentTarget.style.backgroundColor = isDark ? 'rgba(52, 211, 153, 0.15)' : '#e6f4ea';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = showProfileMenu ? '#059669' : 'rgba(16, 185, 129, 0.2)';
-                  e.currentTarget.style.backgroundColor = showProfileMenu ? '#e6f4ea' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#f8fafc');
+                  e.currentTarget.style.borderColor = showProfileMenu ? '#059669' : (isDark ? 'var(--border)' : 'rgba(16, 185, 129, 0.2)');
+                  e.currentTarget.style.backgroundColor = showProfileMenu ? (isDark ? 'rgba(52, 211, 153, 0.2)' : '#e6f4ea') : (isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc');
                   e.currentTarget.style.transform = 'none';
                 }}
                 title={`Profil ${currentUser?.name || 'Pengguna'}`}
@@ -8335,7 +8425,7 @@ export default function App() {
               {showProfileMenu && (
                 <div style={{
                   position: 'absolute', right: 0, top: '48px', width: '250px', backgroundColor: 'var(--bg-card)',
-                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.15)', border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '16px', boxShadow: '0 12px 36px rgba(0,0,0,0.3)', border: isDark ? '1px solid var(--border)' : '1px solid rgba(16, 185, 129, 0.2)',
                   zIndex: 100, overflow: 'hidden', padding: '0.5rem 0'
                 }}>
                   <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)' }}>
@@ -8346,7 +8436,7 @@ export default function App() {
                   <button 
                     onClick={() => { setActiveMenu("settings"); setShowProfileMenu(false); }}
                     style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'background-color 0.15s' }}
-                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : '#f0fdf4'}
                     onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <Settings size={15} color="#059669" /> Pengaturan Sistem
@@ -8354,7 +8444,7 @@ export default function App() {
                   <button 
                     onClick={() => { handleLogout(); setShowProfileMenu(false); }}
                     style={{ width: '100%', padding: '0.65rem 1rem', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'background-color 0.15s' }}
-                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2'}
                     onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <LogOut size={15} /> Ganti Akun / Keluar
@@ -8433,7 +8523,7 @@ export default function App() {
                           <span>●</span> Total Terdata
                         </div>
                       </div>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
                         <ChevronRight size={12} />
                       </div>
                     </div>
@@ -8467,7 +8557,7 @@ export default function App() {
                           <span>●</span> Total Terdata
                         </div>
                       </div>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
                         <ChevronRight size={12} />
                       </div>
                     </div>
@@ -8562,7 +8652,7 @@ export default function App() {
                       </div>
 
                       {/* Range Pill Selector */}
-                      <div style={{ display: 'flex', backgroundColor: 'var(--bg-main)', padding: '3px', borderRadius: '24px', border: '1px solid var(--border-light)', gap: '2px' }}>
+                      <div style={{ display: 'flex', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '3px', borderRadius: '24px', border: '1px solid var(--border-light)', gap: '2px' }}>
                         {[
                           { id: '7d', label: '7 Hari' },
                           { id: '30d', label: '30 Hari' },
@@ -8800,7 +8890,7 @@ export default function App() {
                               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-dark)', width: '110px', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {cat.label}
                               </div>
-                              <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
+                              <div style={{ flex: 1, height: '8px', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
                                 <div style={{ width: `${cat.percent}%`, height: '100%', backgroundColor: '#0d5c3a', borderRadius: '10px' }} />
                               </div>
                               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dark)', width: '55px', textAlign: 'right', flexShrink: 0 }}>
@@ -9071,7 +9161,7 @@ export default function App() {
                           <tr key={item.id} style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderRadius: '8px', transition: 'all 0.2s ease' }} onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'} onMouseOut={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'}>
                             <td style={{ padding: '0.75rem', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', borderLeft: '1px solid var(--border-light)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }}>
                                   <FileText size={14} style={{ color: 'var(--text-muted)' }} />
                                 </div>
                                 <div>
@@ -9085,7 +9175,7 @@ export default function App() {
                               </div>
                             </td>
                             <td style={{ padding: '0.75rem', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)' }}>
-                              <span style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 500 }}>
+                              <span style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', border: '1px solid var(--border)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 500 }}>
                                 {item.category}
                               </span>
                             </td>
@@ -9225,7 +9315,7 @@ export default function App() {
                     fontSize: '0.72rem',
                     padding: '2px 8px',
                     borderRadius: '20px',
-                    backgroundColor: 'var(--bg-main)',
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)',
                     color: 'var(--text-dark)',
                     fontWeight: 700
                   }}>
@@ -9413,7 +9503,7 @@ export default function App() {
                           </div>
                         </td>
                         <td style={{ padding: '0.75rem', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: '4px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-light)', color: 'var(--text-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: '4px', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', border: '1px solid var(--border-light)', color: 'var(--text-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
                             <User size={12} style={{ color: 'var(--primary)' }} />
                             {l.sender}
                           </div>
@@ -9519,7 +9609,7 @@ export default function App() {
                     fontSize: '0.72rem',
                     padding: '2px 8px',
                     borderRadius: '20px',
-                    backgroundColor: 'var(--bg-main)',
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)',
                     color: 'var(--text-dark)',
                     fontWeight: 700
                   }}>
@@ -9651,7 +9741,7 @@ export default function App() {
                   </div>
 
                   {/* Isi / Body Sertifikat */}
-                  <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)', margin: 0 }}> Isi / Body Sertifikat</label>
                       <button
@@ -9677,7 +9767,7 @@ export default function App() {
                   </div>
 
                   {/* Editable TTD Section */}
-                  <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                  <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', marginTop: '0.5rem' }}>
                     <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--primary)' }}>Pengaturan Tanda Tangan (TTD) Sertifikat</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                       <div>
@@ -9763,7 +9853,7 @@ export default function App() {
                       <tr key={c.id} style={{ backgroundColor: 'var(--bg-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderRadius: '8px', transition: 'all 0.2s ease' }} onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'} onMouseOut={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'}>
                         <td style={{ padding: '0.75rem', borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', borderLeft: '1px solid var(--border-light)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }}>
                               <Award size={14} style={{ color: 'var(--text-muted)' }} />
                             </div>
                             <div>
@@ -9779,7 +9869,7 @@ export default function App() {
                           </div>
                         </td>
                         <td style={{ padding: '0.75rem', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: '4px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-light)', color: 'var(--text-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0.6rem', borderRadius: '4px', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', border: '1px solid var(--border-light)', color: 'var(--text-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
                             <User size={12} style={{ color: 'var(--primary)' }} />
                             {c.name}
                           </div>
@@ -9792,7 +9882,7 @@ export default function App() {
                             <button title="Cetak / Download PDF" onClick={() => { setCurrentPrintDoc(c); setCurrentPrintType("cert"); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: 'var(--primary)', color: '#fff', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-dark)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}>
                               <Download size={14} />
                             </button>
-                            <button title="Edit Sertifikat" onClick={() => setCertModal({ isOpen: true, data: c })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
+                            <button title="Edit Sertifikat" onClick={() => setCertModal({ isOpen: true, data: c })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
                               <Edit3 size={14} />
                             </button>
                             <button title="Hapus" onClick={() => handleDeleteCert(c.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: '#fee2e2', color: '#b91c1c', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fecaca'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}>
@@ -9811,179 +9901,444 @@ export default function App() {
             </div>
           )}
 
-          {/* Return Banner for Special Access pages */}
-          {["warehouse", "requests", "assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu) && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0.85rem', marginBottom: '0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
-                <Shield size={14} /> Akses Khusus: {["warehouse", "requests"].includes(activeMenu) ? 'Gudang Umum' : 'Aset Tetap'}
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveMenu('settings')}
-                style={{ background: '#fff', border: '1px solid #86efac', color: '#166534', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              >
-                ← Pengaturan Akses Khusus
-              </button>
-            </div>
+          {/* Top Navigation & Auto-Lock Header for Special Access Modules */}
+          {["warehouse", "requests", "borrowings", "assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu) && (
+            (() => {
+              const isGudangModule = ["warehouse", "requests", "borrowings"].includes(activeMenu);
+              const isFixedAssetModule = ["assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu);
+
+              // Tampilkan menu bar hanya jika modul sudah terbuka (unlocked)
+              if (isGudangModule && !specialAccess.gudang) return null;
+              if (isFixedAssetModule && !specialAccess.fixed_asset) return null;
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.85rem',
+                  padding: '0.65rem 1rem',
+                  marginBottom: '1rem',
+                  backgroundColor: 'var(--bg-card, #ffffff)',
+                  border: '1.5px solid var(--border-light, #e2e8f0)',
+                  borderRadius: '14px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}>
+                  {/* Left: Module identity & status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(13, 101, 45, 0.1)',
+                      color: '#0d652d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {isGudangModule ? <Box size={20} /> : <Building2 size={20} />}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
+                          {isGudangModule ? 'Gudang Umum' : 'Aset Tetap'}
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          backgroundColor: '#dcfce7',
+                          color: '#15803d',
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <Unlock size={11} /> Terbuka
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Center: Menu buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                    {isGudangModule ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('warehouse')}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: activeMenu === 'warehouse' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: activeMenu === 'warehouse' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: activeMenu === 'warehouse' ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: activeMenu === 'warehouse' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Box size={14} /> Inventaris Barang
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('requests')}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            padding: '0.45rem 0.9rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: ['requests', 'borrowings'].includes(activeMenu) ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: ['requests', 'borrowings'].includes(activeMenu) ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: ['requests', 'borrowings'].includes(activeMenu) ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: ['requests', 'borrowings'].includes(activeMenu) ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Send size={14} /> Permintaan Keluar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('assets_inventaris')}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: activeMenu === 'assets_inventaris' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: activeMenu === 'assets_inventaris' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: activeMenu === 'assets_inventaris' ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: activeMenu === 'assets_inventaris' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Database size={13} /> Data Aset
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('asset_master')}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: activeMenu === 'asset_master' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: activeMenu === 'asset_master' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: activeMenu === 'asset_master' ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: activeMenu === 'asset_master' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Sliders size={13} /> Master Data
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('asset_relocation')}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: activeMenu === 'asset_relocation' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: activeMenu === 'asset_relocation' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: activeMenu === 'asset_relocation' ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: activeMenu === 'asset_relocation' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <MapPin size={13} /> Relokasi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (typeof setAssetReportTab === 'function') setAssetReportTab('all_assets');
+                            setActiveMenu('report_assets');
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '9px',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: activeMenu === 'report_assets' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
+                            backgroundColor: activeMenu === 'report_assets' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
+                            color: activeMenu === 'report_assets' ? '#ffffff' : 'var(--text-dark, #334155)',
+                            boxShadow: activeMenu === 'report_assets' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <FileText size={13} /> Laporan
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Right: Exit Button (otomatis mengunci saat keluar) */}
+                  <button
+                    type="button"
+                    onClick={() => lockSpecialAccess(isGudangModule ? 'gudang' : 'fixed_asset')}
+                    title={`Keluar dari modul ${isGudangModule ? 'Gudang Umum' : 'Aset Tetap'}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1.5px solid #fca5a5',
+                      borderRadius: '9px',
+                      fontSize: '0.84rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(220,38,38,0.1)'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#fecaca'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                  >
+                    <LogOut size={14} /> Keluar
+                  </button>
+                </div>
+              );
+            })()
           )}
 
           {/* 8. Warehouse Stock management */}
           {activeMenu === "warehouse" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {(() => {
-                const isUnlocked = (() => {
-                  try {
-                    return Boolean(JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{}')?.gudang);
-                  } catch { return false; }
-                })();
-
-                if (!isUnlocked) {
-                  return (
-                    <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                      <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                        <Lock size={34} />
-                      </div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Gudang Umum Terkunci</h3>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                        Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu('settings')}
-                        style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                      >
-                        Buka di Pengaturan Akses Khusus
-                      </button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <InventarisGudang 
-                    warehouseItems={warehouseItems}
-                    stockInForm={stockInForm}
-                    setStockInForm={setStockInForm}
-                    handleStockIn={handleStockIn}
-                    stockOutForm={stockOutForm}
-                    setStockOutForm={setStockOutForm}
-                    handleStockOut={handleStockOut}
-                  />
-                );
-              })()}
+              {!specialAccess.gudang ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Gudang Umum Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
+                <InventarisGudang 
+                  warehouseItems={warehouseItems}
+                  stockInForm={stockInForm}
+                  setStockInForm={setStockInForm}
+                  handleStockIn={handleStockIn}
+                  stockOutForm={stockOutForm}
+                  setStockOutForm={setStockOutForm}
+                  handleStockOut={handleStockOut}
+                />
+              )}
             </div>
           )}
 
           {activeMenu === "assets_inventaris" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <DataAsetInventaris
-                settings={settings}
-                assets={assetsInventaris}
-                onSaveAssets={(newAssets) => {
-                  setAssetsInventaris(newAssets);
-                  db.set("assets_inventaris", newAssets);
-                }}
-                locations={assetLocations}
-                types={assetTypes}
-                units={assetUnits}
-                openConfirm={openConfirm}
-                arsipRef={arsipAsetRef}
-              />
+              {!specialAccess.fixed_asset ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
+                <DataAsetInventaris
+                  settings={settings}
+                  assets={assetsInventaris}
+                  onSaveAssets={(newAssets) => {
+                    setAssetsInventaris(newAssets);
+                    db.set("assets_inventaris", newAssets);
+                  }}
+                  locations={assetLocations}
+                  types={assetTypes}
+                  units={assetUnits}
+                  openConfirm={openConfirm}
+                  arsipRef={arsipAsetRef}
+                />
+              )}
             </div>
           )}
 
           {activeMenu === "asset_master" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <MasterAset 
-                types={assetTypes}
-                onSaveTypes={(updated) => {
-                  setAssetTypes(updated);
-                  db.set("asset_types", updated);
-                }}
-                locations={assetLocations}
-                onSaveLocations={(updated) => {
-                  setAssetLocations(updated);
-                  db.set("asset_locations", updated);
-                }}
-                units={assetUnits}
-                onSaveUnits={(updated) => {
-                  setAssetUnits(updated);
-                  db.set("asset_units", updated);
-                }}
-                openConfirm={openConfirm}
-              />
+              {!specialAccess.fixed_asset ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
+                <MasterAset 
+                  types={assetTypes}
+                  onSaveTypes={(updated) => {
+                    setAssetTypes(updated);
+                    db.set("asset_types", updated);
+                  }}
+                  locations={assetLocations}
+                  onSaveLocations={(updated) => {
+                    setAssetLocations(updated);
+                    db.set("asset_locations", updated);
+                  }}
+                  units={assetUnits}
+                  onSaveUnits={(updated) => {
+                    setAssetUnits(updated);
+                    db.set("asset_units", updated);
+                  }}
+                  openConfirm={openConfirm}
+                />
+              )}
             </div>
           )}
 
           {activeMenu === "asset_relocation" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <RelokasiAset 
-                assets={assetsInventaris}
-                onSaveAssets={(updated) => {
-                  setAssetsInventaris(updated);
-                  db.set("assets_inventaris", updated);
-                }}
-                locations={assetLocations}
-                relocations={assetRelocations}
-                onSaveRelocations={(updated) => {
-                  setAssetRelocations(updated);
-                  db.set("asset_relocations", updated);
-                }}
-                openConfirm={openConfirm}
-              />
+              {!specialAccess.fixed_asset ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
+                <RelokasiAset 
+                  assets={assetsInventaris}
+                  onSaveAssets={(updated) => {
+                    setAssetsInventaris(updated);
+                    db.set("assets_inventaris", updated);
+                  }}
+                  locations={assetLocations}
+                  relocations={assetRelocations}
+                  onSaveRelocations={(updated) => {
+                    setAssetRelocations(updated);
+                    db.set("asset_relocations", updated);
+                  }}
+                  openConfirm={openConfirm}
+                />
+              )}
             </div>
           )}
 
           {activeMenu === "report_assets" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <LaporanAset
-                settings={settings}
-                assets={assetsInventaris}
-                locations={assetLocations}
-                types={assetTypes}
-                initialTab={assetReportTab}
-              />
+              {!specialAccess.fixed_asset ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
+                <LaporanAset
+                  settings={settings}
+                  assets={assetsInventaris}
+                  locations={assetLocations}
+                  types={assetTypes}
+                  initialTab={assetReportTab}
+                />
+              )}
             </div>
           )}
 
-          
-
           {(activeMenu === "requests" || activeMenu === "borrowings") && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {(() => {
-                const isUnlocked = (() => {
-                  try {
-                    return Boolean(JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{}')?.gudang);
-                  } catch { return false; }
-                })();
-
-                if (!isUnlocked) {
-                  return (
-                    <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                      <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                        <Lock size={34} />
-                      </div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Permintaan Keluar Terkunci</h3>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                        Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveMenu('settings')}
-                        style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                      >
-                        Buka di Pengaturan Akses Khusus
-                      </button>
-                    </div>
-                  );
-                }
-
-                return null;
-              })() || (
+              {!specialAccess.gudang ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
+                    <Lock size={34} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Permintaan Keluar Terkunci</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+                    Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('settings')}
+                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    Buka di Pengaturan Akses Khusus
+                  </button>
+                </div>
+              ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Form Input Permintaan Keluar */}
                 <div className="elegant-card elegant-table-container">
                   {/* Form Type Switcher Header */}
-                  <div style={{ display: 'flex', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-light)', padding: '0.35rem', borderRadius: '8px', marginBottom: '1.25rem', gap: '0.35rem' }}>
+                  <div style={{ display: 'flex', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', border: '1px solid var(--border-light)', padding: '0.35rem', borderRadius: '8px', marginBottom: '1.25rem', gap: '0.35rem' }}>
                     <button 
                       type="button" 
                       onClick={() => setRequestFormType("out")} 
@@ -10097,7 +10452,7 @@ export default function App() {
                     </div>
                     
                     {/* Modern Segmented Control Filter */}
-                    <div style={{ display: 'flex', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-light)', padding: '0.25rem', borderRadius: '8px', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', border: '1px solid var(--border-light)', padding: '0.25rem', borderRadius: '8px', gap: '0.25rem' }}>
                       <button 
                         onClick={() => setRequestFilterTab("all")}
                         style={{ padding: '0.4rem 1rem', borderRadius: '6px', border: 'none', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', backgroundColor: requestFilterTab === "all" ? 'var(--bg-card)' : 'transparent', color: requestFilterTab === "all" ? 'var(--primary)' : 'var(--text-muted)', boxShadow: requestFilterTab === "all" ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
@@ -10167,7 +10522,7 @@ export default function App() {
                           </td>
                           <td style={{ padding: '0.75rem', borderTopRightRadius: '8px', borderBottomRightRadius: '8px', borderTop: '1px solid var(--border-light)', borderBottom: '1px solid var(--border-light)', borderRight: '1px solid var(--border-light)' }}>
                             <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                              <button onClick={() => setRequestModal({ isOpen: true, type: "out", action: "edit", data: out })} title="Edit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
+                              <button onClick={() => setRequestModal({ isOpen: true, type: "out", action: "edit", data: out })} title="Edit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
                                 <Edit3 size={14} />
                               </button>
                               {(!out.status || out.status === 'Selesai') && (
@@ -10235,7 +10590,7 @@ export default function App() {
                                   <CheckCircle2 size={14} />
                                 </button>
                               )}
-                              <button onClick={() => setRequestModal({ isOpen: true, type: "borrow", action: "edit", data: b })} title="Edit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
+                              <button onClick={() => setRequestModal({ isOpen: true, type: "borrow", action: "edit", data: b })} title="Edit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: '1px solid var(--border-light)', cursor: 'pointer', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', color: 'var(--text-dark)', transition: 'all 0.2s' }}>
                                   <Edit3 size={14} />
                               </button>
                               <button onClick={() => handleDeleteRequest("borrow", b.id)} title="Hapus" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: '#fee2e2', color: '#b91c1c', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fecaca'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}>
@@ -11054,7 +11409,7 @@ export default function App() {
                       <option value="non-direktur">Selain Direktur / Umum (Logo Kiri)</option>
                     </select>
                   </div>
-                  <div style={{ border: '1px solid var(--border-light)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-main)', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ border: '1px solid var(--border-light)', padding: '0.75rem', borderRadius: '8px', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>Format Tanda Tangan</span>
                       <div style={{ display: 'flex', backgroundColor: 'var(--bg-card)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border)', gap: '2px' }}>
@@ -11213,7 +11568,7 @@ export default function App() {
               </div>
 
               {/* Editable TTD Section for Cert Edit Modal */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', border: '1px solid var(--border-light)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-main)', marginTop: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', border: '1px solid var(--border-light)', padding: '0.75rem', borderRadius: '8px', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', marginTop: '0.5rem' }}>
                 <div>
                   <span style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--primary)' }}>Ttd Kiri (Bebas)</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -11483,7 +11838,7 @@ export default function App() {
               flexDirection: 'column' 
             }}
           >
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-light)', backgroundColor: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-light)', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <div style={{ width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Inbox size={18} />
@@ -11504,17 +11859,17 @@ export default function App() {
 
             <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Nomor Surat</span>
                   <strong style={{ fontSize: '0.88rem', color: 'var(--primary)' }}>{selectedIncomingDetail.refNo}</strong>
                 </div>
-                <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Tanggal Masuk</span>
                   <strong style={{ fontSize: '0.88rem', color: 'var(--text-dark)' }}>{selectedIncomingDetail.date || '-'}</strong>
                 </div>
               </div>
 
-              <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Instansi / Asal Pengirim</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-dark)', fontWeight: 600, fontSize: '0.88rem' }}>
                   <User size={14} style={{ color: 'var(--primary)' }} />
@@ -11522,21 +11877,21 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Perihal Surat</span>
                 <div style={{ color: 'var(--text-dark)', fontSize: '0.88rem', lineHeight: '1.4' }}>
                   {selectedIncomingDetail.subject}
                 </div>
               </div>
 
-              <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Tujuan Disposisi</span>
                 <span style={{ display: 'inline-block', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '0.25rem 0.65rem', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 600 }}>
                   {selectedIncomingDetail.disposition}
                 </span>
               </div>
 
-              <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div style={{ backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <FileText size={16} style={{ color: 'var(--text-muted)' }} />
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -11559,7 +11914,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: 'var(--bg-main)' }}>
+            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)' }}>
               <button 
                 type="button" 
                 onClick={() => {
@@ -11596,7 +11951,7 @@ export default function App() {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '0.5rem' }}>
             <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '14px', width: '100%', maxWidth: '1050px', height: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1px solid var(--border-light)', overflow: 'hidden' }}>
               {/* Modal Header (Responsive Desktop & Mobile) */}
-              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)', backgroundColor: 'var(--bg-main)', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-light)', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -11615,7 +11970,7 @@ export default function App() {
                       }
                       setDocViewerModal({ isOpen: false, title: "", fileName: "", blobUrl: null, dataUrl: null });
                     }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
                     title="Tutup"
                   >
                     <X size={18} />
@@ -11634,7 +11989,7 @@ export default function App() {
                       }
                     }}
                     title="Buka di Tab Baru"
-                    style={{ flex: isMobileDevice ? '1' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-dark)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                    style={{ flex: isMobileDevice ? '1' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.45rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'var(--bg-main)', color: 'var(--text-dark)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                   >
                     <ExternalLink size={13} /> Buka di Tab Baru
                   </button>
