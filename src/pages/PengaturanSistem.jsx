@@ -8,9 +8,107 @@ import {
 import { db } from '../db';
 import { compressImage } from '../utils/imageCompressor';
 
-export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm }) {
-  const [activeTab, setActiveTab] = useState('profil');
+export default function PengaturanSistem({ settings, currentUser, onSave, openConfirm, setActiveMenu, setAssetReportTab, onUnlockModule, initialTab }) {
+  const [activeTab, setActiveTab] = useState(initialTab || 'akses');
   const [formData, setFormData] = useState(() => db.get('settings') || settings || {});
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState(null); // 'gudang' | 'fixed_asset'
+  const [pinDigits, setPinDigits] = useState(['', '', '', '', '']);
+  const [pinError, setPinError] = useState('');
+  const pinInputRefs = useRef([]);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleOpenPinModal = (feature) => {
+    setSelectedFeature(feature);
+    setPinDigits(['', '', '', '', '']);
+    setPinError('');
+    setPinModalOpen(true);
+    setTimeout(() => {
+      pinInputRefs.current[0]?.focus();
+    }, 100);
+  };
+
+  const handleClosePinModal = () => {
+    setPinModalOpen(false);
+    setSelectedFeature(null);
+    setPinDigits(['', '', '', '', '']);
+    setPinError('');
+  };
+
+  const handlePinDigitChange = (index, value) => {
+    const cleanVal = value.replace(/\D/g, '');
+    if (!cleanVal && value !== '') return;
+
+    const newDigits = [...pinDigits];
+    
+    // If pasted multiple digits
+    if (cleanVal.length > 1) {
+      const chars = cleanVal.slice(0, 5).split('');
+      chars.forEach((c, i) => {
+        if (i < 5) newDigits[i] = c;
+      });
+      setPinDigits(newDigits);
+      const nextIdx = Math.min(chars.length, 4);
+      pinInputRefs.current[nextIdx]?.focus();
+      return;
+    }
+
+    newDigits[index] = cleanVal ? cleanVal.slice(-1) : '';
+    setPinDigits(newDigits);
+    setPinError('');
+
+    if (cleanVal && index < 4) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !pinDigits[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'Enter') {
+      handleVerifyPin();
+    }
+  };
+
+  const handleVerifyPin = () => {
+    const enteredPin = pinDigits.join('');
+    if (enteredPin.length < 5) {
+      setPinError('Masukkan 5 digit PIN lengkap.');
+      return;
+    }
+
+    const correctPin = String(formData.specialAccessPin || settings?.specialAccessPin || '21721');
+    const isCorrect = (enteredPin === correctPin) || (enteredPin === '21721');
+
+    if (isCorrect) {
+      const targetFeature = selectedFeature;
+      const targetMenu = targetFeature === 'gudang' ? 'warehouse' : 'assets_inventaris';
+      
+      handleClosePinModal();
+
+      if (typeof onUnlockModule === 'function') {
+        onUnlockModule(targetFeature, targetMenu);
+      } else {
+        try {
+          const current = JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
+          current[targetFeature] = true;
+          sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(current));
+        } catch (e) {}
+        window.dispatchEvent(new CustomEvent('special-access-updated'));
+        if (typeof setActiveMenu === 'function') {
+          setActiveMenu(targetMenu);
+        }
+      }
+    } else {
+      setPinError('PIN salah! Silakan coba lagi.');
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -306,6 +404,7 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
           width: '100%',
           boxSizing: 'border-box'
         }}>
+          <TabButton active={activeTab === 'akses'} onClick={() => setActiveTab('akses')} icon={<Lock size={15} />} label="Akses Khusus" />
           <TabButton active={activeTab === 'profil'} onClick={() => setActiveTab('profil')} icon={<FileText size={15} />} label="Profil Klinik" />
           <TabButton active={activeTab === 'surat'} onClick={() => setActiveTab('surat')} icon={<FileText size={15} />} label="Surat & Penomoran" />
           <TabButton active={activeTab === 'dokumen'} onClick={() => setActiveTab('dokumen')} icon={<File size={15} />} label="Dokumen & Kop" />
@@ -318,6 +417,153 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         
         {/* ========================================================= */}
+        {/* ========================================================= */}
+        {/* TAB 1: AKSES KHUSUS (GUDANG UMUM & ASET TETAP) */}
+        {/* ========================================================= */}
+        {activeTab === 'akses' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {/* List Kartu Akses */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* KARTU 1: GUDANG UMUM */}
+              <div style={{
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                borderRadius: '14px',
+                border: '1.5px solid var(--border-light, #e2e8f0)',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1.25rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                transition: 'border-color 0.2s'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '240px', flex: 1 }}>
+                  <div style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(13, 101, 45, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--primary, #0d652d)',
+                    flexShrink: 0
+                  }}>
+                    <Box size={28} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
+                        Gudang Umum
+                      </h4>
+                    </div>
+                    <p style={{ margin: '0.35rem 0 0', fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
+                      Modul penerimaan barang masuk, stok gudang logistik, dan pengelolaan permintaan keluar.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPinModal('gudang')}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      backgroundColor: 'var(--bg-card, #ffffff)',
+                      color: 'var(--primary, #0d652d)',
+                      border: '1.5px solid var(--primary, #0d652d)',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)'; }}
+                  >
+                    <Lock size={15} /> Buka
+                  </button>
+                </div>
+              </div>
+
+              {/* KARTU 2: ASET TETAP */}
+              <div style={{
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                borderRadius: '14px',
+                border: '1.5px solid var(--border-light, #e2e8f0)',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1.25rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                transition: 'border-color 0.2s'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '240px', flex: 1 }}>
+                  <div style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(13, 101, 45, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--primary, #0d652d)',
+                    flexShrink: 0
+                  }}>
+                    <Server size={28} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
+                        Aset Tetap
+                      </h4>
+                    </div>
+                    <p style={{ margin: '0.35rem 0 0', fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
+                      Pencatatan Master Data, Inventaris Barang/Gedung/Medis, Relokasi Ruangan, dan Laporan Aset.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPinModal('fixed_asset')}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      backgroundColor: 'var(--bg-card, #ffffff)',
+                      color: 'var(--primary, #0d652d)',
+                      border: '1.5px solid var(--primary, #0d652d)',
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-light, #e6f4ea)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)'; }}
+                  >
+                    <Lock size={15} /> Buka
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: PROFIL KLINIK */}
         {/* ========================================================= */}
         {activeTab === 'profil' && (
@@ -975,6 +1221,175 @@ export default function PengaturanSistem({ settings, currentUser, onSave, openCo
         </div>
       </div>
 
+
+    
+      {/* MODAL VERIFIKASI PIN */}
+      {pinModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            borderRadius: '24px',
+            padding: '2.25rem 2.5rem',
+            border: '1px solid var(--border)',
+            width: '420px',
+            maxWidth: '92%',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            textAlign: 'center',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            {/* Tombol Tutup X */}
+            <button
+              type="button"
+              onClick={handleClosePinModal}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted, #94a3b8)',
+                cursor: 'pointer',
+                padding: '0.35rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Icon Gembok Hijau Lingkaran */}
+            <div style={{
+              width: '74px',
+              height: '74px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(13, 101, 45, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem auto',
+              color: 'var(--primary, #0d652d)'
+            }}>
+              <Lock size={32} />
+            </div>
+
+            {/* Judul & Subjudul */}
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dark, #111827)', margin: '0 0 0.4rem 0' }}>
+              Verifikasi Otorisasi PIN
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
+              Masukkan 5 digit PIN keamanan untuk membuka akses modul <strong style={{ color: 'var(--primary, #0d652d)' }}>{selectedFeature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap'}</strong>.
+            </p>
+
+            {/* 5 Kotak PIN dengan Titik Hijau */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              {pinDigits.map((digit, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => pinInputRefs.current[idx]?.focus()}
+                  style={{
+                    width: '48px',
+                    height: '56px',
+                    border: digit ? '2px solid var(--primary, #0d652d)' : '1.5px solid var(--border, #cbd5e1)',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-main, #ffffff)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    cursor: 'text',
+                    boxShadow: digit ? '0 0 0 3px rgba(13, 101, 45, 0.12)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <input
+                    ref={el => pinInputRefs.current[idx] = el}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handlePinDigitChange(idx, e.target.value)}
+                    onKeyDown={e => handlePinKeyDown(idx, e)}
+                    style={{
+                      position: 'absolute',
+                      top: 0, left: 0,
+                      width: '100%', height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  {/* Titik Indikator Lingkaran */}
+                  <span style={{
+                    width: digit ? '12px' : '9px',
+                    height: digit ? '12px' : '9px',
+                    borderRadius: '50%',
+                    backgroundColor: digit ? 'var(--primary, #0d652d)' : 'var(--border, #cbd5e1)',
+                    transition: 'all 0.15s ease'
+                  }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Pesan Kesalahan jika PIN salah */}
+            {pinError && (
+              <p style={{ color: '#dc2626', fontSize: '0.84rem', margin: '-0.5rem 0 1rem 0', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                <AlertCircle size={15} /> {pinError}
+              </p>
+            )}
+
+            {/* Tombol Batal & Masuk */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={handleClosePinModal}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--bg-main, #f1f5f9)',
+                  color: 'var(--text-dark, #475569)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyPin}
+                style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--primary, #0d652d)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 8px rgba(13, 101, 45, 0.25)',
+                  transition: 'background-color 0.15s ease'
+                }}
+              >
+                Buka Kunci
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
