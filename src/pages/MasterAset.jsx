@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { defaultAssetUnits, defaultAssetLocations, defaultAssetTypes } from '../defaultData';
 import { Plus, Trash2, Edit3, Save, RotateCcw, Database, Tag, MapPin, Award } from 'lucide-react';
 
 const MasterAset = ({ 
@@ -8,6 +9,22 @@ const MasterAset = ({
   openConfirm
 }) => {
   const [activeSubTab, setActiveSubTab] = useState("locations"); // "types" | "locations" | "units"
+  
+  const effectiveTypes = Array.isArray(types) && types.length > 0 ? types : defaultAssetTypes;
+  const effectiveLocations = Array.isArray(locations) && locations.length > 0 ? locations : defaultAssetLocations;
+  const effectiveUnits = Array.isArray(units) && units.length > 0 ? units : defaultAssetUnits;
+
+  useEffect(() => {
+    if ((!Array.isArray(units) || units.length === 0) && typeof onSaveUnits === 'function') {
+      onSaveUnits(defaultAssetUnits);
+    }
+    if ((!Array.isArray(locations) || locations.length === 0) && typeof onSaveLocations === 'function') {
+      onSaveLocations(defaultAssetLocations);
+    }
+    if ((!Array.isArray(types) || types.length === 0) && typeof onSaveTypes === 'function') {
+      onSaveTypes(defaultAssetTypes);
+    }
+  }, []);
   
   // Edit & New Form States
   const [editIndex, setEditIndex] = useState(null);
@@ -23,15 +40,15 @@ const MasterAset = ({
     let nameLabel = "";
 
     if (activeSubTab === "types") {
-      list = types;
+      list = effectiveTypes;
       saveFunc = onSaveTypes;
       nameLabel = "Jenis Aset";
     } else if (activeSubTab === "locations") {
-      list = locations;
+      list = effectiveLocations;
       saveFunc = onSaveLocations;
       nameLabel = "Lokasi Aset";
     } else {
-      list = units;
+      list = effectiveUnits;
       saveFunc = onSaveUnits;
       nameLabel = "Satuan";
     }
@@ -65,15 +82,15 @@ const MasterAset = ({
     let nameLabel = "";
 
     if (activeSubTab === "types") {
-      list = types;
+      list = effectiveTypes;
       saveFunc = onSaveTypes;
       nameLabel = "Jenis Aset";
     } else if (activeSubTab === "locations") {
-      list = locations;
+      list = effectiveLocations;
       saveFunc = onSaveLocations;
       nameLabel = "Lokasi Aset";
     } else {
-      list = units;
+      list = effectiveUnits;
       saveFunc = onSaveUnits;
       nameLabel = "Satuan";
     }
@@ -102,15 +119,15 @@ const MasterAset = ({
     let nameLabel = "";
 
     if (activeSubTab === "types") {
-      list = types;
+      list = effectiveTypes;
       saveFunc = onSaveTypes;
       nameLabel = "Jenis Aset";
     } else if (activeSubTab === "locations") {
-      list = locations;
+      list = effectiveLocations;
       saveFunc = onSaveLocations;
       nameLabel = "Lokasi Aset";
     } else {
-      list = units;
+      list = effectiveUnits;
       saveFunc = onSaveUnits;
       nameLabel = "Satuan";
     }
@@ -131,15 +148,15 @@ const MasterAset = ({
     let icon = null;
 
     if (activeSubTab === "types") {
-      list = types;
+      list = effectiveTypes;
       title = "Daftar Jenis Aset (Fixed Asset Types)";
       icon = <Tag size={18} style={{ color: 'var(--primary)' }} />;
     } else if (activeSubTab === "locations") {
-      list = locations;
+      list = effectiveLocations;
       title = "Daftar Lokasi Penempatan Aset (Asset Locations)";
       icon = <MapPin size={18} style={{ color: 'var(--primary)' }} />;
     } else {
-      list = units;
+      list = effectiveUnits;
       title = "Daftar Satuan Perolehan Aset (Asset Units)";
       icon = <Award size={18} style={{ color: 'var(--primary)' }} />;
     }

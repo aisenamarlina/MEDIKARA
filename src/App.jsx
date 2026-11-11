@@ -27,7 +27,10 @@ import RelokasiAset from './pages/RelokasiAset';
 import LaporanAset from './pages/LaporanAset';
 import SuratKeluar from './pages/SuratKeluar';
 import PengaturanSistem from './pages/PengaturanSistem';
-import { defaultUsers, defaultDirectorSignature, defaultClinicStamp, defaultSettings } from './defaultData';
+import { 
+  defaultUsers, defaultDirectorSignature, defaultClinicStamp, defaultSettings,
+  defaultAssetsInventaris, defaultAssetLocations, defaultAssetTypes, defaultAssetUnits
+} from './defaultData';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import confetti from 'canvas-confetti';
 
@@ -673,10 +676,22 @@ export default function App() {
       if (!key || key === '__all__' || key === 'stock_out') setStockOutList(db.get("stock_out") || []);
       if (!key || key === '__all__' || key === 'borrowings') setBorrowings(db.get("borrowings") || []);
       if (!key || key === '__all__' || key === 'inventory') setInventoryList(db.get("inventory") || []);
-      if (!key || key === '__all__' || key === 'assets_inventaris') setAssetsInventaris(db.get("assets_inventaris") || []);
-      if (!key || key === '__all__' || key === 'asset_types') setAssetTypes(db.get("asset_types") || []);
-      if (!key || key === '__all__' || key === 'asset_locations') setAssetLocations(db.get("asset_locations") || []);
-      if (!key || key === '__all__' || key === 'asset_units') setAssetUnits(db.get("asset_units") || []);
+      if (!key || key === '__all__' || key === 'assets_inventaris') {
+        const a = db.get("assets_inventaris");
+        setAssetsInventaris(Array.isArray(a) && a.length > 0 ? a : defaultAssetsInventaris);
+      }
+      if (!key || key === '__all__' || key === 'asset_types') {
+        const t = db.get("asset_types");
+        setAssetTypes(Array.isArray(t) && t.length > 0 ? t : defaultAssetTypes);
+      }
+      if (!key || key === '__all__' || key === 'asset_locations') {
+        const l = db.get("asset_locations");
+        setAssetLocations(Array.isArray(l) && l.length > 0 ? l : defaultAssetLocations);
+      }
+      if (!key || key === '__all__' || key === 'asset_units') {
+        const u = db.get("asset_units");
+        setAssetUnits(Array.isArray(u) && u.length > 0 ? u : defaultAssetUnits);
+      }
       if (!key || key === '__all__' || key === 'asset_relocations') setAssetRelocations(db.get("asset_relocations") || []);
       if (!key || key === '__all__' || key === 'asset_opnames') setAssetOpnames(db.get("asset_opnames") || []);
       if (!key || key === '__all__' || key === 'activity_logs') setActivityLogs(db.get("activity_logs") || []);
@@ -698,8 +713,16 @@ export default function App() {
       setOutgoingLetters(db.get("outgoing_letters") || []);
       setCertificates(db.get("certificates") || []);
       setWarehouseItems(db.get("warehouse_items") || []);
-      setAssetsInventaris(db.get("assets_inventaris") || []);
       setDigitalArchive(db.get("digital_archive") || []);
+      
+      const curAssets = db.get("assets_inventaris");
+      setAssetsInventaris(Array.isArray(curAssets) && curAssets.length > 0 ? curAssets : defaultAssetsInventaris);
+      const curTypes = db.get("asset_types");
+      setAssetTypes(Array.isArray(curTypes) && curTypes.length > 0 ? curTypes : defaultAssetTypes);
+      const curLocs = db.get("asset_locations");
+      setAssetLocations(Array.isArray(curLocs) && curLocs.length > 0 ? curLocs : defaultAssetLocations);
+      const curUnits = db.get("asset_units");
+      setAssetUnits(Array.isArray(curUnits) && curUnits.length > 0 ? curUnits : defaultAssetUnits);
     });
 
     const handleWindowFocus = () => {
@@ -1054,10 +1077,22 @@ export default function App() {
   const [stockOutList, setStockOutList] = useState(() => db.get("stock_out") || []);
   const [borrowings, setBorrowings] = useState(() => db.get("borrowings") || []);
   const [inventoryList, setInventoryList] = useState(() => db.get("inventory") || []);
-  const [assetsInventaris, setAssetsInventaris] = useState(() => db.get("assets_inventaris") || []);
-  const [assetTypes, setAssetTypes] = useState(() => db.get("asset_types") || []);
-  const [assetLocations, setAssetLocations] = useState(() => db.get("asset_locations") || []);
-  const [assetUnits, setAssetUnits] = useState(() => db.get("asset_units") || []);
+  const [assetsInventaris, setAssetsInventaris] = useState(() => {
+    const d = db.get("assets_inventaris");
+    return Array.isArray(d) && d.length > 0 ? d : defaultAssetsInventaris;
+  });
+  const [assetTypes, setAssetTypes] = useState(() => {
+    const d = db.get("asset_types");
+    return Array.isArray(d) && d.length > 0 ? d : defaultAssetTypes;
+  });
+  const [assetLocations, setAssetLocations] = useState(() => {
+    const d = db.get("asset_locations");
+    return Array.isArray(d) && d.length > 0 ? d : defaultAssetLocations;
+  });
+  const [assetUnits, setAssetUnits] = useState(() => {
+    const d = db.get("asset_units");
+    return Array.isArray(d) && d.length > 0 ? d : defaultAssetUnits;
+  });
   const [assetRelocations, setAssetRelocations] = useState(() => db.get("asset_relocations") || []);
   const [assetOpnames, setAssetOpnames] = useState(() => db.get("asset_opnames") || []);
   const [activityLogs, setActivityLogs] = useState(() => db.get("activity_logs") || []);

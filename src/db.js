@@ -240,6 +240,34 @@ const lsGet = (key, defaultVal = null) => {
       }
       return normalizedArc;
     }
+    if (key === 'asset_units') {
+      const normalizedUnits = normalizeCollection(key, val, defaultAssetUnits);
+      if (!Array.isArray(normalizedUnits) || normalizedUnits.length === 0) {
+        return defaultAssetUnits;
+      }
+      return normalizedUnits;
+    }
+    if (key === 'asset_locations') {
+      const normalizedLocs = normalizeCollection(key, val, defaultAssetLocations);
+      if (!Array.isArray(normalizedLocs) || normalizedLocs.length === 0) {
+        return defaultAssetLocations;
+      }
+      return normalizedLocs;
+    }
+    if (key === 'asset_types') {
+      const normalizedTypes = normalizeCollection(key, val, defaultAssetTypes);
+      if (!Array.isArray(normalizedTypes) || normalizedTypes.length === 0) {
+        return defaultAssetTypes;
+      }
+      return normalizedTypes;
+    }
+    if (key === 'assets_inventaris') {
+      const normalizedAssets = normalizeCollection(key, val, defaultAssetsInventaris);
+      if (!Array.isArray(normalizedAssets) || normalizedAssets.length === 0) {
+        return defaultAssetsInventaris;
+      }
+      return normalizedAssets;
+    }
     return normalizeCollection(key, val, fallback);
   } catch {
     return fallback;
@@ -326,15 +354,27 @@ const pushToServer = async (key, data) => {
 };
 
 const seedInitialDataIfEmpty = () => {
-  const isInitialized = localStorage.getItem(LS_PREFIX + '__system_initialized');
-  if (isInitialized) {
-    return;
-  }
-
-  const seedIfEmpty = (key, defaultData) => {
+  const seedIfEmpty = (key, defaultData, pushCloud = false) => {
     const raw = localStorage.getItem(LS_PREFIX + key);
+    let needsSeed = false;
     if (raw === null || raw === undefined) {
-      lsSet(key, defaultData, true); // Hanya cache lokal, JANGAN timpa database cloud!
+      needsSeed = true;
+    } else {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(defaultData) && defaultData.length > 0 && (!Array.isArray(parsed) || parsed.length === 0)) {
+          needsSeed = true;
+        }
+      } catch {
+        needsSeed = true;
+      }
+    }
+
+    if (needsSeed && defaultData) {
+      lsSet(key, defaultData, true);
+      if (pushCloud) {
+        pushToServer(key, defaultData);
+      }
     }
   };
 
@@ -347,14 +387,13 @@ const seedInitialDataIfEmpty = () => {
   seedIfEmpty('stock_in', defaultStockIn);
   seedIfEmpty('stock_out', defaultStockOut);
   seedIfEmpty('borrowings', defaultBorrowings);
-  seedIfEmpty('assets_inventaris', defaultAssetsInventaris);
-  seedIfEmpty('asset_locations', defaultAssetLocations);
-  seedIfEmpty('asset_types', defaultAssetTypes);
-  seedIfEmpty('asset_units', defaultAssetUnits);
+  seedIfEmpty('assets_inventaris', defaultAssetsInventaris, true);
+  seedIfEmpty('asset_locations', defaultAssetLocations, true);
+  seedIfEmpty('asset_types', defaultAssetTypes, true);
+  seedIfEmpty('asset_units', defaultAssetUnits, true);
   seedIfEmpty('digital_archive', defaultDigitalArchive);
   seedIfEmpty('users', defaultUsers);
 
-  // Tandai bahwa sistem sudah diinisialisasi
   localStorage.setItem(LS_PREFIX + '__system_initialized', 'true');
 };
 
@@ -473,6 +512,28 @@ export const initDB = async () => {
       sessionUserData.role = 'Administrator';
       lsSet('kbr_session_user_data', sessionUserData);
     }
+  }
+
+  // 3b. Pastikan master data aset selalu terisi
+  const curUnits = lsGet('asset_units', defaultAssetUnits);
+  if (!Array.isArray(curUnits) || curUnits.length === 0) {
+    lsSet('asset_units', defaultAssetUnits);
+    pushToServer('asset_units', defaultAssetUnits);
+  }
+  const curTypes = lsGet('asset_types', defaultAssetTypes);
+  if (!Array.isArray(curTypes) || curTypes.length === 0) {
+    lsSet('asset_types', defaultAssetTypes);
+    pushToServer('asset_types', defaultAssetTypes);
+  }
+  const curLocs = lsGet('asset_locations', defaultAssetLocations);
+  if (!Array.isArray(curLocs) || curLocs.length === 0) {
+    lsSet('asset_locations', defaultAssetLocations);
+    pushToServer('asset_locations', defaultAssetLocations);
+  }
+  const curAssets = lsGet('assets_inventaris', defaultAssetsInventaris);
+  if (!Array.isArray(curAssets) || curAssets.length === 0) {
+    lsSet('assets_inventaris', defaultAssetsInventaris);
+    pushToServer('assets_inventaris', defaultAssetsInventaris);
   }
 
   // 4. Pastikan logo selalu menggunakan PNG transparan (/logo.png) & email resmi terupdate
