@@ -499,7 +499,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (['letters_in', 'letters_out'].includes(activeMenu)) {
+    if (['letters_in', 'letters_out', 'certificates', 'archive'].includes(activeMenu)) {
       setOpenSystems(prev => prev.surat ? prev : { ...prev, surat: true });
     }
     if (['warehouse', 'requests', 'borrowings'].includes(activeMenu)) {
@@ -7849,19 +7849,19 @@ export default function App() {
             {!sidebarCollapsed && <span>Dashboard</span>}
           </button>
 
-          {/* Persuratan (Collapsible / Direct) */}
+          {/* Sistem Surat (Collapsible / Direct) */}
           <button 
             onClick={() => { 
               if (sidebarCollapsed) { setSidebarCollapsed(false); }
               toggleSystem("surat");
             }} 
-            className={`sidebar-item ${['letters_in', 'letters_out'].includes(activeMenu) && !openSystems.surat ? 'active' : ''}`}
-            title={sidebarCollapsed ? "Persuratan" : ""}
+            className={`sidebar-item ${['letters_in', 'letters_out', 'certificates', 'archive'].includes(activeMenu) && !openSystems.surat ? 'active' : ''}`}
+            title={sidebarCollapsed ? "Sistem Surat" : ""}
             style={{ justifyContent: 'space-between' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <Mail size={19} style={{ color: ['letters_in', 'letters_out'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
-              {!sidebarCollapsed && <span>Persuratan</span>}
+              <Mail size={19} style={{ color: ['letters_in', 'letters_out', 'certificates', 'archive'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Sistem Surat</span>}
             </div>
             {!sidebarCollapsed && (
               openSystems.surat 
@@ -7870,7 +7870,7 @@ export default function App() {
             )}
           </button>
           
-          {/* Sub menu Persuratan */}
+          {/* Sub menu Sistem Surat */}
           {openSystems.surat && !sidebarCollapsed && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.25rem', marginBottom: '0.2rem' }}>
               <button 
@@ -7887,28 +7887,22 @@ export default function App() {
                 <MinusCircle size={14} style={{ color: activeMenu === "letters_out" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
                 <span>Surat Keluar</span>
               </button>
+              <button 
+                onClick={() => setActiveMenu("certificates")} 
+                className={`sidebar-subitem ${activeMenu === "certificates" ? "active" : ""}`}
+              >
+                <Award size={14} style={{ color: activeMenu === "certificates" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Piagam & Sertifikat</span>
+              </button>
+              <button 
+                onClick={() => setActiveMenu("archive")} 
+                className={`sidebar-subitem ${activeMenu === "archive" ? "active" : ""}`}
+              >
+                <Folder size={14} style={{ color: activeMenu === "archive" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Arsip Digital</span>
+              </button>
             </div>
           )}
-
-          {/* Sertifikat & Piagam */}
-          <button 
-            onClick={() => { setActiveMenu("certificates"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
-            className={`sidebar-item ${activeMenu === "certificates" ? "active" : ""}`} 
-            title={sidebarCollapsed ? "Sertifikat & Piagam" : ""}
-          >
-            <Award size={19} style={{ color: activeMenu === "certificates" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
-            {!sidebarCollapsed && <span>Sertifikat & Piagam</span>}
-          </button>
-
-          {/* Arsip Digital */}
-          <button 
-            onClick={() => { setActiveMenu("archive"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
-            className={`sidebar-item ${activeMenu === "archive" ? "active" : ""}`} 
-            title={sidebarCollapsed ? "Arsip Digital" : ""}
-          >
-            <Folder size={19} style={{ color: activeMenu === "archive" ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
-            {!sidebarCollapsed && <span>Arsip Digital</span>}
-          </button>
 
           {/* Gudang Umum (Collapsible / Direct) */}
           <button 
