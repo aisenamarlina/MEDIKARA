@@ -432,95 +432,7 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSuratNavPopup, setShowSuratNavPopup] = useState(false);
 
-  // Special Access (Gudang Umum & Aset Tetap) state & sync
-  const [specialAccess, setSpecialAccess] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
-    } catch {
-      return { gudang: false, fixed_asset: false };
-    }
-  });
 
-  useEffect(() => {
-    const handleSyncAccess = () => {
-      try {
-        const current = JSON.parse(sessionStorage.getItem('kbr_unlocked_special_access') || '{"gudang":false,"fixed_asset":false}');
-        setSpecialAccess(current);
-      } catch (e) {}
-    };
-    window.addEventListener('special-access-updated', handleSyncAccess);
-    window.addEventListener('storage', handleSyncAccess);
-    return () => {
-      window.removeEventListener('special-access-updated', handleSyncAccess);
-      window.removeEventListener('storage', handleSyncAccess);
-    };
-  }, []);
-
-  // Otomatis mengunci saat meninggalkan modul Gudang Umum atau Aset Tetap
-  const prevMenuRef = useRef(activeMenu);
-  useEffect(() => {
-    const prevMenu = prevMenuRef.current;
-    prevMenuRef.current = activeMenu;
-
-    const gudangMenus = ['warehouse', 'requests', 'borrowings'];
-    const assetMenus = ['assets_inventaris', 'asset_master', 'asset_relocation', 'report_assets'];
-
-    const wasInGudang = gudangMenus.includes(prevMenu);
-    const isNowInGudang = gudangMenus.includes(activeMenu);
-
-    const wasInAssets = assetMenus.includes(prevMenu);
-    const isNowInAssets = assetMenus.includes(activeMenu);
-
-    let nextAccess = { ...specialAccess };
-    let changed = false;
-
-    // Otomatis mengunci saat pengguna keluar dari area Gudang Umum
-    if (wasInGudang && !isNowInGudang && nextAccess.gudang) {
-      nextAccess.gudang = false;
-      changed = true;
-    }
-
-    // Otomatis mengunci saat pengguna keluar dari area Aset Tetap
-    if (wasInAssets && !isNowInAssets && nextAccess.fixed_asset) {
-      nextAccess.fixed_asset = false;
-      changed = true;
-    }
-
-    if (changed) {
-      setSpecialAccess(nextAccess);
-      try {
-        sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(nextAccess));
-      } catch (e) {}
-      window.dispatchEvent(new CustomEvent('special-access-updated'));
-    }
-  }, [activeMenu, specialAccess]);
-
-  const unlockSpecialAccess = (feature) => {
-    const updated = { ...specialAccess, [feature]: true };
-    setSpecialAccess(updated);
-    try {
-      sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
-    } catch (e) {}
-    window.dispatchEvent(new CustomEvent('special-access-updated'));
-    const featureName = feature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
-    window.dispatchEvent(new CustomEvent('app-toast', { 
-      detail: { message: `Kunci dibuka! Akses ${featureName} kini aktif.`, type: 'success' } 
-    }));
-  };
-
-  const lockSpecialAccess = (feature) => {
-    const updated = { ...specialAccess, [feature]: false };
-    setSpecialAccess(updated);
-    try {
-      sessionStorage.setItem('kbr_unlocked_special_access', JSON.stringify(updated));
-    } catch (e) {}
-    window.dispatchEvent(new CustomEvent('special-access-updated'));
-    const featureName = feature === 'gudang' ? 'Gudang Umum' : 'Aset Tetap';
-    window.dispatchEvent(new CustomEvent('app-toast', { 
-      detail: { message: `Keluar dari modul ${featureName}. Otomatis dikunci kembali.`, type: 'info' } 
-    }));
-    setActiveMenu('dashboard');
-  };
 
   // Scroll-to-arsip state & refs
   const [scrollToSection, setScrollToSection] = useState(null);
@@ -589,6 +501,12 @@ export default function App() {
   useEffect(() => {
     if (['letters_in', 'letters_out'].includes(activeMenu)) {
       setOpenSystems(prev => prev.surat ? prev : { ...prev, surat: true });
+    }
+    if (['warehouse', 'requests', 'borrowings'].includes(activeMenu)) {
+      setOpenSystems(prev => prev.gudang ? prev : { ...prev, gudang: true });
+    }
+    if (['assets_inventaris', 'asset_master', 'asset_relocation', 'report_assets'].includes(activeMenu)) {
+      setOpenSystems(prev => prev.fixed_asset ? prev : { ...prev, fixed_asset: true });
     }
   }, [activeMenu]);
 
@@ -7992,6 +7910,102 @@ export default function App() {
             {!sidebarCollapsed && <span>Arsip Digital</span>}
           </button>
 
+          {/* Gudang Umum (Collapsible / Direct) */}
+          <button 
+            onClick={() => { 
+              if (sidebarCollapsed) { setSidebarCollapsed(false); }
+              toggleSystem("gudang");
+            }} 
+            className={`sidebar-item ${['warehouse', 'requests', 'borrowings'].includes(activeMenu) && !openSystems.gudang ? 'active' : ''}`}
+            title={sidebarCollapsed ? "Gudang Umum" : ""}
+            style={{ justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <Warehouse size={19} style={{ color: ['warehouse', 'requests', 'borrowings'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Gudang Umum</span>}
+            </div>
+            {!sidebarCollapsed && (
+              openSystems.gudang 
+                ? <ChevronDown size={14} style={{ color: isDark ? '#34d399' : '#059669' }} /> 
+                : <ChevronRight size={14} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
+            )}
+          </button>
+          
+          {/* Sub menu Gudang Umum */}
+          {openSystems.gudang && !sidebarCollapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.25rem', marginBottom: '0.2rem' }}>
+              <button 
+                onClick={() => setActiveMenu("warehouse")} 
+                className={`sidebar-subitem ${activeMenu === "warehouse" ? "active" : ""}`}
+              >
+                <CircleDot size={14} style={{ color: activeMenu === "warehouse" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Inventaris Barang</span>
+              </button>
+              <button 
+                onClick={() => setActiveMenu("requests")} 
+                className={`sidebar-subitem ${['requests', 'borrowings'].includes(activeMenu) ? "active" : ""}`}
+              >
+                <MinusCircle size={14} style={{ color: ['requests', 'borrowings'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Permintaan Keluar</span>
+              </button>
+            </div>
+          )}
+
+          {/* Aset Tetap (Collapsible / Direct) */}
+          <button 
+            onClick={() => { 
+              if (sidebarCollapsed) { setSidebarCollapsed(false); }
+              toggleSystem("fixed_asset");
+            }} 
+            className={`sidebar-item ${['assets_inventaris', 'asset_master', 'asset_relocation', 'report_assets'].includes(activeMenu) && !openSystems.fixed_asset ? 'active' : ''}`}
+            title={sidebarCollapsed ? "Aset Tetap" : ""}
+            style={{ justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <Database size={19} style={{ color: ['assets_inventaris', 'asset_master', 'asset_relocation', 'report_assets'].includes(activeMenu) ? (isDark ? '#6ee7b7' : '#064e3b') : (isDark ? '#94a3b8' : '#059669'), flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Aset Tetap</span>}
+            </div>
+            {!sidebarCollapsed && (
+              openSystems.fixed_asset 
+                ? <ChevronDown size={14} style={{ color: isDark ? '#34d399' : '#059669' }} /> 
+                : <ChevronRight size={14} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
+            )}
+          </button>
+          
+          {/* Sub menu Aset Tetap */}
+          {openSystems.fixed_asset && !sidebarCollapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.25rem', marginBottom: '0.2rem' }}>
+              <button 
+                onClick={() => setActiveMenu("asset_master")} 
+                className={`sidebar-subitem ${activeMenu === "asset_master" ? "active" : ""}`}
+              >
+                <CircleDot size={14} style={{ color: activeMenu === "asset_master" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Master Data Aset</span>
+              </button>
+              <button 
+                onClick={() => setActiveMenu("assets_inventaris")} 
+                className={`sidebar-subitem ${activeMenu === "assets_inventaris" ? "active" : ""}`}
+              >
+                <CircleDot size={14} style={{ color: activeMenu === "assets_inventaris" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Data Aset & Inventaris</span>
+              </button>
+              <button 
+                onClick={() => setActiveMenu("asset_relocation")} 
+                className={`sidebar-subitem ${activeMenu === "asset_relocation" ? "active" : ""}`}
+              >
+                <CircleDot size={14} style={{ color: activeMenu === "asset_relocation" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Relokasi Aset</span>
+              </button>
+              <button 
+                onClick={() => { setAssetReportTab("all_assets"); setActiveMenu("report_assets"); }} 
+                className={`sidebar-subitem ${activeMenu === "report_assets" ? "active" : ""}`}
+              >
+                <CircleDot size={14} style={{ color: activeMenu === "report_assets" ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#34d399' : '#10b981'), flexShrink: 0 }} />
+                <span>Laporan Aset</span>
+              </button>
+            </div>
+          )}
+
           {/* Laporan */}
           <button 
             onClick={() => { setActiveMenu("reports"); if (sidebarCollapsed) setSidebarCollapsed(false); }} 
@@ -9901,440 +9915,95 @@ export default function App() {
             </div>
           )}
 
-          {/* Top Navigation & Auto-Lock Header for Special Access Modules */}
-          {["warehouse", "requests", "borrowings", "assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu) && (
-            (() => {
-              const isGudangModule = ["warehouse", "requests", "borrowings"].includes(activeMenu);
-              const isFixedAssetModule = ["assets_inventaris", "asset_master", "asset_relocation", "report_assets"].includes(activeMenu);
-
-              // Tampilkan menu bar hanya jika modul sudah terbuka (unlocked)
-              if (isGudangModule && !specialAccess.gudang) return null;
-              if (isFixedAssetModule && !specialAccess.fixed_asset) return null;
-
-              return (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '0.85rem',
-                  padding: '0.65rem 1rem',
-                  marginBottom: '1rem',
-                  backgroundColor: 'var(--bg-card, #ffffff)',
-                  border: '1.5px solid var(--border-light, #e2e8f0)',
-                  borderRadius: '14px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-                }}>
-                  {/* Left: Module identity & status */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <div style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(13, 101, 45, 0.1)',
-                      color: '#0d652d',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      {isGudangModule ? <Box size={20} /> : <Building2 size={20} />}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-dark, #111827)' }}>
-                          {isGudangModule ? 'Gudang Umum' : 'Aset Tetap'}
-                        </span>
-                        <span style={{
-                          fontSize: '0.72rem',
-                          backgroundColor: '#dcfce7',
-                          color: '#15803d',
-                          padding: '0.15rem 0.55rem',
-                          borderRadius: '10px',
-                          fontWeight: 700,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}>
-                          <Unlock size={11} /> Terbuka
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Center: Menu buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                    {isGudangModule ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setActiveMenu('warehouse')}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem',
-                            padding: '0.45rem 0.9rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: activeMenu === 'warehouse' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: activeMenu === 'warehouse' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: activeMenu === 'warehouse' ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: activeMenu === 'warehouse' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Box size={14} /> Inventaris Barang
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveMenu('requests')}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem',
-                            padding: '0.45rem 0.9rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: ['requests', 'borrowings'].includes(activeMenu) ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: ['requests', 'borrowings'].includes(activeMenu) ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: ['requests', 'borrowings'].includes(activeMenu) ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: ['requests', 'borrowings'].includes(activeMenu) ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Send size={14} /> Permintaan Keluar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setActiveMenu('assets_inventaris')}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.45rem 0.85rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: activeMenu === 'assets_inventaris' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: activeMenu === 'assets_inventaris' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: activeMenu === 'assets_inventaris' ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: activeMenu === 'assets_inventaris' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Database size={13} /> Data Aset
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveMenu('asset_master')}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.45rem 0.85rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: activeMenu === 'asset_master' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: activeMenu === 'asset_master' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: activeMenu === 'asset_master' ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: activeMenu === 'asset_master' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <Sliders size={13} /> Master Data
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveMenu('asset_relocation')}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.45rem 0.85rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: activeMenu === 'asset_relocation' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: activeMenu === 'asset_relocation' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: activeMenu === 'asset_relocation' ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: activeMenu === 'asset_relocation' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <MapPin size={13} /> Relokasi
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (typeof setAssetReportTab === 'function') setAssetReportTab('all_assets');
-                            setActiveMenu('report_assets');
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.45rem 0.85rem',
-                            borderRadius: '9px',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: activeMenu === 'report_assets' ? 'none' : '1px solid var(--border-light, #e2e8f0)',
-                            backgroundColor: activeMenu === 'report_assets' ? '#0d652d' : 'var(--bg-main, #f8fafc)',
-                            color: activeMenu === 'report_assets' ? '#ffffff' : 'var(--text-dark, #334155)',
-                            boxShadow: activeMenu === 'report_assets' ? '0 2px 6px rgba(13,101,45,0.25)' : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <FileText size={13} /> Laporan
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Right: Exit Button (otomatis mengunci saat keluar) */}
-                  <button
-                    type="button"
-                    onClick={() => lockSpecialAccess(isGudangModule ? 'gudang' : 'fixed_asset')}
-                    title={`Keluar dari modul ${isGudangModule ? 'Gudang Umum' : 'Aset Tetap'}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#fee2e2',
-                      color: '#dc2626',
-                      border: '1.5px solid #fca5a5',
-                      borderRadius: '9px',
-                      fontSize: '0.84rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: '0 1px 3px rgba(220,38,38,0.1)'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#fecaca'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
-                  >
-                    <LogOut size={14} /> Keluar
-                  </button>
-                </div>
-              );
-            })()
-          )}
-
           {/* 8. Warehouse Stock management */}
           {activeMenu === "warehouse" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {!specialAccess.gudang ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Gudang Umum Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <InventarisGudang 
-                  warehouseItems={warehouseItems}
-                  stockInForm={stockInForm}
-                  setStockInForm={setStockInForm}
-                  handleStockIn={handleStockIn}
-                  stockOutForm={stockOutForm}
-                  setStockOutForm={setStockOutForm}
-                  handleStockOut={handleStockOut}
-                />
-              )}
+              <InventarisGudang 
+                warehouseItems={warehouseItems}
+                stockInForm={stockInForm}
+                setStockInForm={setStockInForm}
+                handleStockIn={handleStockIn}
+                stockOutForm={stockOutForm}
+                setStockOutForm={setStockOutForm}
+                handleStockOut={handleStockOut}
+              />
             </div>
           )}
 
           {activeMenu === "assets_inventaris" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {!specialAccess.fixed_asset ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <DataAsetInventaris
-                  settings={settings}
-                  assets={assetsInventaris}
-                  onSaveAssets={(newAssets) => {
-                    setAssetsInventaris(newAssets);
-                    db.set("assets_inventaris", newAssets);
-                  }}
-                  locations={assetLocations}
-                  types={assetTypes}
-                  units={assetUnits}
-                  openConfirm={openConfirm}
-                  arsipRef={arsipAsetRef}
-                />
-              )}
+              <DataAsetInventaris
+                settings={settings}
+                assets={assetsInventaris}
+                onSaveAssets={(newAssets) => {
+                  setAssetsInventaris(newAssets);
+                  db.set("assets_inventaris", newAssets);
+                }}
+                locations={assetLocations}
+                types={assetTypes}
+                units={assetUnits}
+                openConfirm={openConfirm}
+                arsipRef={arsipAsetRef}
+              />
             </div>
           )}
 
           {activeMenu === "asset_master" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {!specialAccess.fixed_asset ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <MasterAset 
-                  types={assetTypes}
-                  onSaveTypes={(updated) => {
-                    setAssetTypes(updated);
-                    db.set("asset_types", updated);
-                  }}
-                  locations={assetLocations}
-                  onSaveLocations={(updated) => {
-                    setAssetLocations(updated);
-                    db.set("asset_locations", updated);
-                  }}
-                  units={assetUnits}
-                  onSaveUnits={(updated) => {
-                    setAssetUnits(updated);
-                    db.set("asset_units", updated);
-                  }}
-                  openConfirm={openConfirm}
-                />
-              )}
+              <MasterAset 
+                types={assetTypes}
+                onSaveTypes={(updated) => {
+                  setAssetTypes(updated);
+                  db.set("asset_types", updated);
+                }}
+                locations={assetLocations}
+                onSaveLocations={(updated) => {
+                  setAssetLocations(updated);
+                  db.set("asset_locations", updated);
+                }}
+                units={assetUnits}
+                onSaveUnits={(updated) => {
+                  setAssetUnits(updated);
+                  db.set("asset_units", updated);
+                }}
+                openConfirm={openConfirm}
+              />
             </div>
           )}
 
           {activeMenu === "asset_relocation" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {!specialAccess.fixed_asset ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <RelokasiAset 
-                  assets={assetsInventaris}
-                  onSaveAssets={(updated) => {
-                    setAssetsInventaris(updated);
-                    db.set("assets_inventaris", updated);
-                  }}
-                  locations={assetLocations}
-                  relocations={assetRelocations}
-                  onSaveRelocations={(updated) => {
-                    setAssetRelocations(updated);
-                    db.set("asset_relocations", updated);
-                  }}
-                  openConfirm={openConfirm}
-                />
-              )}
+              <RelokasiAset 
+                assets={assetsInventaris}
+                onSaveAssets={(updated) => {
+                  setAssetsInventaris(updated);
+                  db.set("assets_inventaris", updated);
+                }}
+                locations={assetLocations}
+                relocations={assetRelocations}
+                onSaveRelocations={(updated) => {
+                  setAssetRelocations(updated);
+                  db.set("asset_relocations", updated);
+                }}
+                openConfirm={openConfirm}
+              />
             </div>
           )}
 
           {activeMenu === "report_assets" && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {!specialAccess.fixed_asset ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Aset Tetap Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Aset Tetap hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <LaporanAset
-                  settings={settings}
-                  assets={assetsInventaris}
-                  locations={assetLocations}
-                  types={assetTypes}
-                  initialTab={assetReportTab}
-                />
-              )}
+              <LaporanAset
+                settings={settings}
+                assets={assetsInventaris}
+                locations={assetLocations}
+                types={assetTypes}
+                initialTab={assetReportTab}
+              />
             </div>
           )}
 
           {(activeMenu === "requests" || activeMenu === "borrowings") && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {!specialAccess.gudang ? (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: 'var(--bg-card, #fff)', borderRadius: '16px', border: '1px solid var(--border-light, #e5e7eb)', maxWidth: '520px', margin: '3rem auto', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: '68px', height: '68px', borderRadius: '50%', backgroundColor: '#e6f4ea', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', color: '#0d652d' }}>
-                    <Lock size={34} />
-                  </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: '0 0 0.5rem 0' }}>Permintaan Keluar Terkunci</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1.75rem 0', lineHeight: 1.5 }}>
-                    Fitur Gudang Umum hanya dapat diakses melalui Pengaturan Akses Khusus dengan verifikasi PIN.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveMenu('settings')}
-                    style={{ padding: '0.65rem 1.5rem', backgroundColor: '#0d652d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    Buka di Pengaturan Akses Khusus
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Form Input Permintaan Keluar */}
                 <div className="elegant-card elegant-table-container">
                   {/* Form Type Switcher Header */}
@@ -10607,8 +10276,6 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-              )}
             </div>
           )}
 
@@ -11174,8 +10841,6 @@ export default function App() {
               currentUser={currentUser} 
               onSave={handleSaveSettings} 
               openConfirm={openConfirm} 
-              setActiveMenu={setActiveMenu}
-              setAssetReportTab={setAssetReportTab}
             />
             </div>
           )}
